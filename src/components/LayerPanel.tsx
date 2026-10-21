@@ -53,7 +53,7 @@ const LAYER_GROUPS: LayerGroupDef[] = [
     fullLabel: 'OSIRIS SDK',
     icon: Network,
     layers: [
-      { key: 'sdk_sea', label: 'Maritime Lines', dataKey: 'sdk_entities' },
+      { key: 'sdk_sea', label: 'Maritime Ships', dataKey: 'sdk_entities' },
     ],
   },
   {
@@ -300,10 +300,10 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
   /* ── DESKTOP ── */
   return (
     <motion.div
-      initial={{ y: 40, opacity: 0, x: '-50%' }}
-      animate={revealed ? { y: 0, opacity: 1, x: '-50%' } : { y: 40, opacity: 0, x: '-50%' }}
+      initial={{ y: 40, opacity: 0 }}
+      animate={revealed ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }}
       transition={{ type: 'spring', damping: 30, stiffness: 200, delay: 0.25 }}
-      className="absolute bottom-3 left-1/2 flex flex-row flex-wrap justify-center max-w-[97vw] items-center px-2.5 py-1.5 z-[240] pointer-events-auto rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
+      className="absolute bottom-3 left-3 flex flex-row flex-wrap max-w-[62vw] items-center px-2.5 py-1.5 z-[240] pointer-events-auto rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
       style={{
         background: 'rgba(0,0,0,0.55)',
         backdropFilter: 'blur(24px) saturate(1.2)',
@@ -338,7 +338,7 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
                 aria-expanded={isOpen}
                 aria-label={`${group.fullLabel}${activeCount ? ` — ${activeCount} active` : ''}`}
                 title={group.fullLabel}
-                className="relative w-10 h-10 flex items-center justify-center cursor-pointer rounded-lg transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+                className="relative w-11 h-11 flex items-center justify-center cursor-pointer rounded-xl border border-white/10 bg-white/[0.03] transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
                 style={{
                   background: isPinned
                     ? 'rgba(255,255,255,0.10)'
@@ -379,11 +379,11 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
               <AnimatePresence>
                 {isOpen && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8, x: '-50%', filter: 'blur(4px)' }}
-                    animate={{ opacity: 1, y: 0, x: '-50%', filter: 'blur(0px)' }}
-                    exit={{ opacity: 0, y: 4, x: '-50%', filter: 'blur(2px)' }}
+                    initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: 4, filter: 'blur(2px)' }}
                     transition={{ duration: 0.18, ease: 'easeOut' }}
-                    className="absolute bottom-[58px] left-1/2 min-w-[230px] rounded-xl p-3 z-[100] pointer-events-auto"
+                    className="absolute bottom-[58px] left-0 min-w-[230px] rounded-xl p-3 z-[100] pointer-events-auto"
                     style={{
                       background: 'rgba(0,0,0,0.6)',
                       backdropFilter: 'blur(40px) saturate(1.5)',

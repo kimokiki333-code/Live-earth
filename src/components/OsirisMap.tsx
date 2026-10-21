@@ -2221,31 +2221,7 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
 
     const links: any[] = [];
 
-    // ── SEA DOMAIN: Real submarine cable data (1-for-1 Match) ──
-    if (activeLayers.sdk_sea && data.submarine_cables) {
-      const ignoredColors = new Set(['#9BB5CC', '#A0B8CD', '#8EABC2', '#9bb5cc', '#a0b8cd', '#8eabc2']);
-      for (const cable of data.submarine_cables) {
-        if (!cable.geometry) continue;
-        
-        // Remove the light blue background arcs
-        if (cable.properties?.color && ignoredColors.has(cable.properties.color)) continue;
-        
-        links.push({
-          type: 'Feature',
-          geometry: cable.geometry, // Raw topographic paths exactly from Submarine Map
-          properties: {
-            domain: 'SEA',
-            fromName: cable.properties?.name || 'Submarine Cable',
-            toName: cable.properties?.landing_points || '',
-            source: 'Global Subsea Cable Network',
-            url: 'https://www.submarinecablemap.com/',
-            ...cable.properties,
-            color: '#1976D2', // Darker blue as requested, more transparent in layer paint
-          },
-        });
-      }
-    }
-
+    // Submarine-cable blue lines removed (user request). sdk-links stays empty.
     setGeo('sdk-links', links);
   }, [mapReady, activeLayers.sdk_sea, activeLayers.sdk_air, activeLayers.sdk_naval, data.submarine_cables, setGeo]);
 

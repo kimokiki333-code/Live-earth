@@ -21,7 +21,6 @@ import type { NavProgress } from '@/lib/navigation';
 import type { LiveDetection } from '@/lib/malware-intel';
 import ScaleBar from '@/components/ScaleBar';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { applySettings, loadSavedSettings } from '@/lib/style-tokens';
 import SharePanel from '@/components/SharePanel';
 import ViewPresets from '@/components/ViewPresets';
 import KeyboardShortcuts from '@/components/KeyboardShortcuts';
@@ -289,8 +288,9 @@ export default function Dashboard() {
   /* Style Studio overrides are inline on <body>, so they survive the theme
      swap above and only need reapplying once per load. */
   useEffect(() => {
-    const saved = loadSavedSettings();
-    if (saved) applySettings(saved);
+    // Style Studio is removed. Wipe any tokens it saved in this browser so a
+    // violet 'Phantom' preset can never override the gold theme again.
+    try { localStorage.removeItem('osiris:style-studio'); } catch { /* private mode */ }
   }, []);
 
   const isMobile = useIsMobile();
@@ -333,7 +333,7 @@ export default function Dashboard() {
     alert_pins: false,
     war_alerts: false,
     day_night: true,
-    cables: true,
+    cables: false, // submarine-cable lines removed
     sdk_sea: true,
     sdk_air: true,
     sdk_naval: true,
@@ -851,20 +851,6 @@ export default function Dashboard() {
     }
 
     // Submarine Cables
-    if (activeLayers.cables && !layerFetchedRef.current.has('cables')) {
-      (async () => {
-        try {
-          const ts = Date.now();
-      const res = await fetch(`/data/submarine-cables.json?v=${ts}`);
-          if (res.ok) {
-             const cablesData = await res.json();
-             dataRef.current = { ...dataRef.current, submarine_cables: cablesData.features };
-             setDataVersion(v => v + 1);
-          }
-        } catch (e) { console.warn('Cables fetch failed'); }
-      })();
-      layerFetchedRef.current.add('cables');
-    }
 
 
     // Live Malware (abuse.ch) is pushed, not fetched — see the SSE subscription below.
@@ -1269,9 +1255,9 @@ export default function Dashboard() {
 
 
       {/* ── RIGHT TOOL STRIP (desktop only — mobile uses bottom nav) ── */}
-      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="absolute left-1/2 -translate-x-1/2 bottom-[74px] flex flex-row flex-wrap justify-center max-w-[97vw] gap-1.5 z-[250] pointer-events-auto bg-black/55 backdrop-blur-md px-2 py-1.5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
+      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="absolute right-3 bottom-3 flex flex-row flex-wrap justify-center max-w-[97vw] gap-1.5 z-[250] pointer-events-auto bg-black/55 backdrop-blur-md px-2 py-1.5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
         <div className="relative group">
-          <button onClick={() => { setShowIntel(!showIntel); setShowAlerts(false); }} className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showIntel ? 'bg-[var(--cyan-primary)]/20' : 'hover:bg-white/10'}`} title="OSINT Recon — IP lookup, network sweep, geolocation" aria-label="OSINT Recon" aria-expanded={showIntel}>
+          <button onClick={() => { setShowIntel(!showIntel); setShowAlerts(false); }} className={`relative w-12 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showIntel ? 'bg-[var(--cyan-primary)]/20' : 'hover:bg-white/10'}`} title="OSINT Recon — IP lookup, network sweep, geolocation" aria-label="OSINT Recon" aria-expanded={showIntel}>
             <Radar className={`w-4 h-4 ${showIntel ? 'text-[var(--cyan-primary)]' : 'text-white/60'}`} />
             {showIntel && (
               <span
@@ -1302,7 +1288,7 @@ export default function Dashboard() {
         </div>
 
         <div className="relative group">
-          <button onClick={() => { setShowIntel(false); setShowAlerts(false); setShowSpaceCam(v => !v); }} className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showSpaceCam ? 'bg-[#00E5FF]/20' : 'hover:bg-white/10'}`} title="Live from Space — 24/7 video downlink from the ISS" aria-label="Live from Space" aria-expanded={showSpaceCam}>
+          <button onClick={() => { setShowIntel(false); setShowAlerts(false); setShowSpaceCam(v => !v); }} className={`relative w-12 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showSpaceCam ? 'bg-[#00E5FF]/20' : 'hover:bg-white/10'}`} title="Live from Space — 24/7 video downlink from the ISS" aria-label="Live from Space" aria-expanded={showSpaceCam}>
             <Radio className={`w-4 h-4 ${showSpaceCam ? 'text-[#00E5FF]' : 'text-white/60'}`} />
             {showSpaceCam && (
               <span
@@ -1324,7 +1310,7 @@ export default function Dashboard() {
         
 
         <div className="relative group">
-          <button onClick={() => { setShowAlerts(!showAlerts); setShowIntel(false); }} className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showAlerts ? 'bg-[#FF3D3D]/20' : 'hover:bg-white/10'}`} title="Live Alerts — earthquakes, conflicts, breaking news" aria-label="Live Alerts" aria-expanded={showAlerts}>
+          <button onClick={() => { setShowAlerts(!showAlerts); setShowIntel(false); }} className={`relative w-12 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showAlerts ? 'bg-[#FF3D3D]/20' : 'hover:bg-white/10'}`} title="Live Alerts — earthquakes, conflicts, breaking news" aria-label="Live Alerts" aria-expanded={showAlerts}>
             <AlertTriangle className={`w-4 h-4 ${showAlerts ? 'text-[#FF3D3D]' : 'text-white/60'}`} />
             {showAlerts && (
               <span
@@ -1346,7 +1332,7 @@ export default function Dashboard() {
         
 
         <div className="relative group">
-          <button onClick={() => { setShowDirections(!showDirections); if (showDirections) { setActiveRoute(null); } setShowDesktopSearch(false); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false); }} className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDirections ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Directions — turn-by-turn routing" aria-label="Directions" aria-expanded={showDirections}>
+          <button onClick={() => { setShowDirections(!showDirections); if (showDirections) { setActiveRoute(null); } setShowDesktopSearch(false); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false); }} className={`relative w-12 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDirections ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Directions — turn-by-turn routing" aria-label="Directions" aria-expanded={showDirections}>
             <Route className={`w-4 h-4 ${showDirections ? 'text-[var(--gold-primary)]' : 'text-white/60'}`} />
             {showDirections && (
               <span
@@ -1359,7 +1345,7 @@ export default function Dashboard() {
         </div>
 
         <div className="relative group">
-          <button onClick={() => { setShowDesktopSearch(!showDesktopSearch); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false); }} className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDesktopSearch ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Search — find locations, cities, coordinates" aria-label="Search" aria-expanded={showDesktopSearch}>
+          <button onClick={() => { setShowDesktopSearch(!showDesktopSearch); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false); }} className={`relative w-12 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDesktopSearch ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Search — find locations, cities, coordinates" aria-label="Search" aria-expanded={showDesktopSearch}>
             <Search className={`w-4 h-4 ${showDesktopSearch ? 'text-[var(--gold-primary)]' : 'text-white/60'}`} />
             {showDesktopSearch && (
               <span
