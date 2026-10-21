@@ -470,6 +470,21 @@ export default function Dashboard() {
       }
     }
 
+    // A place name (London, cairo…) is not an IP/domain: geocode it and fly.
+    const looksLikeAddress = /^[\d.]+$/.test(query) || (!/\s/.test(query) && /\.[a-z]{2,}$/i.test(query));
+    if (!looksLikeAddress) {
+      try {
+        const res = await fetch(`/api/geosearch?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        const hit = data?.results?.[0];
+        if (hit && Number.isFinite(hit.lat) && Number.isFinite(hit.lng)) {
+          setGeoPin({ lat: hit.lat, lng: hit.lng, label: hit.name, sub: hit.context || undefined, tone: 'target', ts: Date.now() });
+          runArrival({ lat: hit.lat, lng: hit.lng }, (hit.name || query).toUpperCase(), false);
+          return;
+        }
+      } catch { /* fall through to the address resolver */ }
+    }
+
     clearFlights();
     setResolving(true);
     setShowOrigin(false);
@@ -1173,6 +1188,7 @@ export default function Dashboard() {
             aria-hidden={Boolean(navSession)}
           >
             <DirectionsBar
+              defaultFrom={origin?.record ? { lat: origin.record.lat, lng: origin.record.lng, label: `Your location · ${origin.record.city || origin.record.country || 'IP'}` } : homeLocation ? { lat: homeLocation.lat, lng: homeLocation.lng, label: 'Your location' } : null}
               center={mapCenter ? { lat: mapCenter.lat, lng: mapCenter.lng } : null}
               onRoute={(r) => setActiveRoute(r)}
               onLiveLocation={setLiveLocation}
@@ -1241,11 +1257,6 @@ export default function Dashboard() {
             <span className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] opacity-80 uppercase text-[var(--cyan-primary)]">GLOBAL MONITORING & INTELLIGENCE</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 mt-1.5 pl-[44px] min-w-0 pr-4">
-          <span className="text-[9px] md:text-[9px] text-[var(--text-muted)] font-mono tracking-[0.2em] md:tracking-[0.3em] uppercase opacity-40 truncate">
-            NEXT-GEN LIVE EARTH <span className="hidden md:inline">· 3D · 2D · SATELLITE · NIGHT · FLIGHTS · MARITIME · SATELLITES · CCTV</span>
-          </span>
-        </div>
       </motion.div>
 
 
@@ -1255,9 +1266,9 @@ export default function Dashboard() {
 
 
       {/* ── RIGHT TOOL STRIP (desktop only — mobile uses bottom nav) ── */}
-      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="absolute right-3 bottom-3 flex flex-row flex-wrap justify-center max-w-[97vw] gap-1.5 z-[250] pointer-events-auto bg-black/55 backdrop-blur-md px-2 py-1.5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
+      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="absolute left-1/2 -translate-x-1/2 bottom-3 flex flex-row flex-wrap justify-center max-w-[97vw] gap-2.5 z-[250] pointer-events-auto bg-black/55 backdrop-blur-md px-2.5 py-1.5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
         <div className="relative group">
-          <button onClick={() => { setShowIntel(!showIntel); setShowAlerts(false); }} className={`relative w-12 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showIntel ? 'bg-[var(--cyan-primary)]/20' : 'hover:bg-white/10'}`} title="OSINT Recon — IP lookup, network sweep, geolocation" aria-label="OSINT Recon" aria-expanded={showIntel}>
+          <button onClick={() => { setShowIntel(!showIntel); setShowAlerts(false); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showIntel ? 'bg-[var(--cyan-primary)]/20' : 'hover:bg-white/10'}`} title="OSINT Recon — IP lookup, network sweep, geolocation" aria-label="OSINT Recon" aria-expanded={showIntel}>
             <Radar className={`w-4 h-4 ${showIntel ? 'text-[var(--cyan-primary)]' : 'text-white/60'}`} />
             {showIntel && (
               <span
@@ -1269,7 +1280,7 @@ export default function Dashboard() {
           <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">RECON</span>
           <AnimatePresence>
             {showIntel && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="fixed right-3 top-[76px] w-[min(92vw,344px)] z-[260]">
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute bottom-[54px] right-0 w-[min(92vw,344px)] z-[260]">
                 <OsintPanel seed={reconSeed} onSweepVisualize={setSweepData} onScanGeolocate={(target, data) => {
                   setScanTargets(prev => {
                     const existing = prev.filter(t => t.id !== target);
@@ -1288,7 +1299,7 @@ export default function Dashboard() {
         </div>
 
         <div className="relative group">
-          <button onClick={() => { setShowIntel(false); setShowAlerts(false); setShowSpaceCam(v => !v); }} className={`relative w-12 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showSpaceCam ? 'bg-[#00E5FF]/20' : 'hover:bg-white/10'}`} title="Live from Space — 24/7 video downlink from the ISS" aria-label="Live from Space" aria-expanded={showSpaceCam}>
+          <button onClick={() => { setShowIntel(false); setShowAlerts(false); setShowSpaceCam(v => !v); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showSpaceCam ? 'bg-[#00E5FF]/20' : 'hover:bg-white/10'}`} title="Live from Space — 24/7 video downlink from the ISS" aria-label="Live from Space" aria-expanded={showSpaceCam}>
             <Radio className={`w-4 h-4 ${showSpaceCam ? 'text-[#00E5FF]' : 'text-white/60'}`} />
             {showSpaceCam && (
               <span
@@ -1300,7 +1311,7 @@ export default function Dashboard() {
           <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">SPACE</span>
           <AnimatePresence>
             {showSpaceCam && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="fixed right-3 top-[76px] w-[min(92vw,344px)] z-[260]">
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute bottom-[54px] right-0 w-[min(92vw,344px)] z-[260]">
                 <SpaceCam />
               </motion.div>
             )}
@@ -1310,7 +1321,7 @@ export default function Dashboard() {
         
 
         <div className="relative group">
-          <button onClick={() => { setShowAlerts(!showAlerts); setShowIntel(false); }} className={`relative w-12 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showAlerts ? 'bg-[#FF3D3D]/20' : 'hover:bg-white/10'}`} title="Live Alerts — earthquakes, conflicts, breaking news" aria-label="Live Alerts" aria-expanded={showAlerts}>
+          <button onClick={() => { setShowAlerts(!showAlerts); setShowIntel(false); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showAlerts ? 'bg-[#FF3D3D]/20' : 'hover:bg-white/10'}`} title="Live Alerts — earthquakes, conflicts, breaking news" aria-label="Live Alerts" aria-expanded={showAlerts}>
             <AlertTriangle className={`w-4 h-4 ${showAlerts ? 'text-[#FF3D3D]' : 'text-white/60'}`} />
             {showAlerts && (
               <span
@@ -1322,7 +1333,7 @@ export default function Dashboard() {
           <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">ALERTS</span>
           <AnimatePresence>
             {showAlerts && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="fixed right-3 top-[76px] w-[min(92vw,344px)] z-[260]">
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute bottom-[54px] right-0 w-[min(92vw,344px)] z-[260]">
                 <LiveAlerts data={data} onLocate={(lat, lng, options) => setFlyToLocation({ lat, lng, zoom: options?.zoom, alertId: options?.alertId, ts: Date.now() })} pinsOn={activeLayers.alert_pins} onTogglePins={on => setActiveLayers(prev => ({ ...prev, alert_pins: on }))} onPinnedChange={setPinnedAlertIds} onWatchFeed={(url, name) => { setLiveFeedUrl(url); setLiveFeedName(name); }} onRefresh={() => fetchEndpoint('/api/news', newsTransform)} />
               </motion.div>
             )}
@@ -1332,7 +1343,7 @@ export default function Dashboard() {
         
 
         <div className="relative group">
-          <button onClick={() => { setShowDirections(!showDirections); if (showDirections) { setActiveRoute(null); } setShowDesktopSearch(false); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false); }} className={`relative w-12 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDirections ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Directions — turn-by-turn routing" aria-label="Directions" aria-expanded={showDirections}>
+          <button onClick={() => { setShowDirections(!showDirections); if (showDirections) { setActiveRoute(null); } setShowDesktopSearch(false); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDirections ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Directions — turn-by-turn routing" aria-label="Directions" aria-expanded={showDirections}>
             <Route className={`w-4 h-4 ${showDirections ? 'text-[var(--gold-primary)]' : 'text-white/60'}`} />
             {showDirections && (
               <span
@@ -1345,7 +1356,7 @@ export default function Dashboard() {
         </div>
 
         <div className="relative group">
-          <button onClick={() => { setShowDesktopSearch(!showDesktopSearch); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false); }} className={`relative w-12 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDesktopSearch ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Search — find locations, cities, coordinates" aria-label="Search" aria-expanded={showDesktopSearch}>
+          <button onClick={() => { setShowDesktopSearch(!showDesktopSearch); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDesktopSearch ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Search — find locations, cities, coordinates" aria-label="Search" aria-expanded={showDesktopSearch}>
             <Search className={`w-4 h-4 ${showDesktopSearch ? 'text-[var(--gold-primary)]' : 'text-white/60'}`} />
             {showDesktopSearch && (
               <span
@@ -1357,7 +1368,7 @@ export default function Dashboard() {
           <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">SEARCH</span>
           <AnimatePresence>
             {showDesktopSearch && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="fixed right-3 top-[76px] w-[min(92vw,344px)] z-[260]">
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute bottom-[54px] right-0 w-[min(92vw,344px)] z-[260]">
                 <SearchBar
                   alwaysExpanded
                   center={mapCenter}

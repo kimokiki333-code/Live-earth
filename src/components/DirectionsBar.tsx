@@ -81,6 +81,8 @@ interface DirectionsBarProps {
   onFollowChange?: (follow: boolean) => void;
   /** Hand the chosen route to the parent to drive live navigation. */
   onStartNavigation?: (route: RouteResult, destinationLabel: string) => void;
+  /** The visitor's IP-detected location: the route's default start. */
+  defaultFrom?: { lat: number; lng: number; label: string } | null;
 }
 
 const MODES = [
@@ -416,10 +418,18 @@ function PlaceInput({
   );
 }
 
-export default function DirectionsBar({ onRoute, onLocate, onClose, center = null, onLiveLocation, onActiveSegment, onFollowChange, onStartNavigation }: DirectionsBarProps) {
+export default function DirectionsBar({ onRoute, onLocate, onClose, center = null, onLiveLocation, onActiveSegment, onFollowChange, onStartNavigation, defaultFrom = null }: DirectionsBarProps) {
   const [fromText, setFromText] = useState('');
   const [toText, setToText] = useState('');
   const [from, setFrom] = useState<Place | null>(null);
+  const seededFrom = useRef(false);
+  useEffect(() => {
+    if (seededFrom.current || !defaultFrom) return;
+    seededFrom.current = true;
+    const place: Place = { label: defaultFrom.label, lat: defaultFrom.lat, lng: defaultFrom.lng, kind: 'current' };
+    setFrom((cur) => cur ?? place);
+    setFromText((cur) => cur || defaultFrom.label);
+  }, [defaultFrom]);
   const [to, setTo] = useState<Place | null>(null);
   const [mode, setMode] = useState<string>('auto');
   const [route, setRoute] = useState<RouteResult | null>(null);

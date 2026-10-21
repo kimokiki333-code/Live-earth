@@ -303,14 +303,14 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
       initial={{ y: 40, opacity: 0 }}
       animate={revealed ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }}
       transition={{ type: 'spring', damping: 30, stiffness: 200, delay: 0.25 }}
-      className="absolute bottom-3 left-3 flex flex-row flex-wrap max-w-[62vw] items-center px-2.5 py-1.5 z-[240] pointer-events-auto rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
+      className="absolute bottom-3 left-3 flex flex-row flex-wrap max-w-[62vw] items-center px-3.5 py-2 z-[240] pointer-events-auto rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
       style={{
         background: 'rgba(0,0,0,0.55)',
         backdropFilter: 'blur(24px) saturate(1.2)',
         WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
       }}
     >
-      <div className="flex flex-row flex-wrap justify-center items-center gap-1">
+      <div className="flex flex-row flex-wrap justify-center items-center gap-3">
         {visibleGroups.map((group) => {
           /* Sub-layers modify a parent rather than draw anything of their own,
              so they do not count towards the rail's reading. */
