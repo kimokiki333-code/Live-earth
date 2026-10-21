@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Copy, Check, Crosshair, Radar, Fingerprint, ShieldQuestion, MapPin } from 'lucide-react';
+import { X, Copy, Check, Crosshair, Radar, Fingerprint, ShieldQuestion, MapPin, ArrowLeft, Clock, Languages, Monitor, AppWindow, Cpu, MemoryStick, MousePointer2, Wifi, Gpu, Cookie, EyeOff, Gauge } from 'lucide-react';
 import {
   flagFor,
   localTimeAt,
@@ -14,7 +14,7 @@ import {
 } from '@/lib/geo-ip';
 
 /* ═══════════════════════════════════════════════════════════════
-   ARGUS GMI — Geolocation dossier
+   BADR LIVE EARTH — Geolocation dossier
    ──────────────────────────────────────────────────────────────
    The card that answers "where is this, and how sure are you?" for either
    the visitor's own connection or a target they looked up.
@@ -86,8 +86,8 @@ function Copyable({ value, label }: { value: string; label: string }) {
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="min-w-0" title={hint}>
-      <div className="text-[8px] font-mono tracking-[0.2em] text-[var(--text-muted)] uppercase">{label}</div>
-      <div className="text-[10.5px] font-mono text-[var(--text-secondary)] truncate mt-[2px]">{value}</div>
+      <div className="text-[9px] font-mono font-semibold tracking-[0.2em] text-[var(--text-secondary)] uppercase">{label}</div>
+      <div className="text-[12.5px] font-mono font-semibold text-white truncate mt-[3px]">{value}</div>
     </div>
   );
 }
@@ -99,40 +99,61 @@ const GRADES: Record<Footprint['grade'], string> = {
   unique: 'NEAR-UNIQUE',
 };
 
-function FootprintPanel({ footprint }: { footprint: Footprint }) {
+const ROW_ICONS: Record<string, typeof Clock> = {
+  TIMEZONE: Clock, LANGUAGE: Languages, PLATFORM: Monitor, SCREEN: AppWindow,
+  VIEWPORT: AppWindow, CPU: Cpu, MEMORY: MemoryStick, TOUCH: MousePointer2,
+  NETWORK: Wifi, GPU: Gpu, COOKIES: Cookie, 'DO NOT TRACK': EyeOff,
+};
+
+function ScoreRing({ value }: { value: number }) {
+  const r = 52; const c = 2 * Math.PI * r;
   return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      className="overflow-hidden"
-    >
-      <div className="mt-3 pt-3 border-t border-[var(--border-secondary)]">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[8.5px] font-mono tracking-[0.22em] text-[var(--text-muted)]">BROWSER FOOTPRINT · LOCAL ONLY</span>
-          <span className="text-[8.5px] font-mono tracking-[0.18em] text-[var(--gold-primary)]">{GRADES[footprint.grade]} · {footprint.entropy}/100</span>
-        </div>
-        <div className="h-[3px] w-full rounded-full bg-white/6 overflow-hidden mb-2.5">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${footprint.entropy}%` }}
-            transition={{ duration: 0.9, ease: 'easeOut' }}
-            className="h-full rounded-full"
-            style={{ background: 'linear-gradient(90deg, var(--cyan-primary), var(--gold-primary))' }}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 max-h-[168px] overflow-y-auto styled-scrollbar pr-1">
-          {footprint.rows.map(row => (
-            <div key={row.label} className="min-w-0" title={row.note}>
-              <div className="text-[7.5px] font-mono tracking-[0.16em] text-[var(--text-muted)]">{row.label}</div>
-              <div className="text-[9.5px] font-mono text-[var(--text-secondary)] truncate">{row.value}</div>
-            </div>
-          ))}
-        </div>
-        <p className="text-[8px] font-mono text-[var(--text-muted)] leading-relaxed mt-2 opacity-70">
-          Read in this tab. Nothing here is transmitted or stored.
-        </p>
+    <div className="relative w-[128px] h-[128px] shrink-0">
+      <svg viewBox="0 0 128 128" className="w-full h-full -rotate-90">
+        <circle cx="64" cy="64" r={r} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="10" />
+        <motion.circle cx="64" cy="64" r={r} fill="none" stroke="var(--gold-primary)" strokeWidth="10" strokeLinecap="round"
+          strokeDasharray={c} initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - value / 100) }}
+          transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }} style={{ filter: 'drop-shadow(0 0 8px var(--gold-glow))' }} />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-mono text-[30px] leading-none font-bold text-white">{value}</span>
+        <span className="font-mono text-[8px] tracking-[0.22em] text-[var(--text-secondary)] mt-1">/ 100 USED</span>
       </div>
+    </div>
+  );
+}
+
+/* The footprint is its OWN view: it replaces the WHOIS/IP view inside the
+   same card (switch with the header buttons), never stacks underneath it. */
+function FootprintPanel({ footprint, onBack }: { footprint: Footprint; onBack: () => void }) {
+  return (
+    <motion.div key="footprint" initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}>
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 text-[10px] font-mono font-semibold tracking-[0.18em] text-[var(--cyan-primary)] hover:text-white transition-colors">
+          <ArrowLeft className="w-3.5 h-3.5" /> WHOIS / IP
+        </button>
+        <span className="text-[9px] font-mono tracking-[0.2em] text-[var(--text-secondary)]">LOCAL ONLY · NOTHING SENT</span>
+      </div>
+      <div className="flex items-center gap-4 mb-4 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+        <ScoreRing value={footprint.entropy} />
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold tracking-[0.2em] text-[var(--gold-primary)]"><Gauge className="w-3.5 h-3.5" /> {GRADES[footprint.grade]}</div>
+          <p className="text-[11px] font-mono text-white leading-relaxed mt-1.5"><span className="font-bold">{footprint.entropy}</span> of 100 identifying signals are visible.</p>
+          <p className="text-[11px] font-mono text-[var(--text-secondary)] leading-relaxed"><span className="text-white font-semibold">{100 - footprint.entropy}</span> remain free / hidden.</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto styled-scrollbar pr-1">
+        {footprint.rows.map(row => {
+          const Icon = ROW_ICONS[row.label] ?? Fingerprint;
+          return (
+            <div key={row.label} title={row.note} className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 min-w-0">
+              <div className="flex items-center gap-1.5 text-[8.5px] font-mono font-semibold tracking-[0.18em] text-[var(--text-secondary)]"><Icon className="w-3 h-3 text-[var(--cyan-primary)]" />{row.label}</div>
+              <div className="text-[11.5px] font-mono font-semibold text-white truncate mt-1">{row.value}</div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[9px] font-mono text-[var(--text-secondary)] leading-relaxed mt-3">Read in this tab only. Nothing here is transmitted or stored.</p>
     </motion.div>
   );
 }
@@ -147,7 +168,7 @@ export default function GeoDossier({ result, variant, onRecenter, onScan, onClos
     return () => clearInterval(id);
   }, []);
 
-  const footprint = useMemo(() => (showFootprint ? readFootprint() : null), [showFootprint]);
+  const footprint = useMemo(() => readFootprint(), []);
 
   if (!record) {
     return (
@@ -178,7 +199,7 @@ export default function GeoDossier({ result, variant, onRecenter, onScan, onClos
       animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
       exit={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-      className={`glass-panel relative overflow-hidden ${compact ? 'w-[min(94vw,360px)]' : 'w-[min(92vw,410px)]'}`}
+      className={`glass-panel relative overflow-hidden ${compact ? 'w-[min(94vw,420px)]' : 'w-[min(94vw,520px)]'}`}
       style={{ borderColor: 'var(--border-primary)' }}
     >
       {/* The only ornament: a hairline that fades across the top. */}
@@ -198,11 +219,11 @@ export default function GeoDossier({ result, variant, onRecenter, onScan, onClos
               </span>
               <span className="text-[8.5px] font-mono tracking-[0.24em]" style={{ color: tone }}>{title}</span>
             </div>
-            <h3 className="text-[15px] font-mono text-[var(--text-primary)] tracking-[0.02em] mt-1.5 truncate">
+            <h3 className="text-[18px] font-mono font-semibold text-white tracking-[0.02em] mt-1.5 truncate">
               {flagFor(record.countryCode) && <span className="mr-1.5">{flagFor(record.countryCode)}</span>}
               {place}
             </h3>
-            <p className="text-[8.5px] font-mono text-[var(--text-muted)] mt-0.5 truncate">{subtitle}</p>
+            <p className="text-[10px] font-mono text-[var(--text-secondary)] mt-0.5 truncate">{subtitle}</p>
           </div>
           <div className="flex items-center gap-1.5">
             <ConfidenceRing value={record.confidence} tone={tone} />
@@ -218,6 +239,11 @@ export default function GeoDossier({ result, variant, onRecenter, onScan, onClos
           </div>
         </div>
 
+        <AnimatePresence mode="wait">
+        {showFootprint && footprint ? (
+          <FootprintPanel footprint={footprint} onBack={() => setShowFootprint(false)} />
+        ) : (
+        <>
         <div className="flex items-center justify-between gap-3 mt-2.5 pb-2.5 border-b border-[var(--border-secondary)]">
           <Copyable value={record.ip} label="address" />
           <div className="flex items-center gap-1.5 text-[8px] font-mono tracking-[0.16em]" style={{ color: tone }}>
@@ -290,7 +316,9 @@ export default function GeoDossier({ result, variant, onRecenter, onScan, onClos
           </button>
         </div>
 
-        <AnimatePresence>{footprint && <FootprintPanel footprint={footprint} />}</AnimatePresence>
+        </>
+        )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

@@ -117,12 +117,9 @@ const newsTransform = (d: { news?: unknown[]; sources?: unknown[]; timestamp?: s
 });
 
 /* One version label for the splash and the header, which used to disagree. */
-const APP_VERSION = 'BADR LIVE EARTH v1.0';
+const APP_VERSION = 'BADR LIVE EARTH v1.1';
 
-/* The splash reports what has actually happened. The last stage waits for
-   the map's first finished frame instead of a fixed timer. */
-const SPLASH_STAGES = ['ESTABLISHING SECURE CONNECTION...', 'INITIALIZING FEEDS...', 'CALIBRATING SENSORS...', 'SYSTEM READY'];
-const SPLASH_PROGRESS = ['25%', '50%', '78%', '100%'];
+/* Startup has NO splash/countdown: the camera opens far from Earth and dives. */
 
 /* The HUD enters as one sequence when the splash lifts. Each piece used to
    run its own fixed timer (2.5–3.5 s), which raced a splash that now lasts
@@ -146,12 +143,11 @@ export default function Dashboard() {
   const [locationLabel, setLocationLabel] = useState('');
   const [regionDossier, setRegionDossier] = useState<any>(null);
   const [dossierLoading, setDossierLoading] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
-  const [splashStage, setSplashStage] = useState(0);
+  const [showSplash] = useState(false); // NO splash — startup is the Moon-dive camera flight
   const [mapReady, setMapReady] = useState(false);
-  const revealed = !showSplash;
+  const revealed = true;
   /* True once the splash has finished fading out, not merely started to. */
-  const [splashGone, setSplashGone] = useState(false);
+  const [splashGone] = useState(true);
   /* Where the viewer is, by IP. Asked for at once; the camera flies there
      once the splash has gone. */
   const [homeLocation, setHomeLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -365,28 +361,6 @@ export default function Dashboard() {
   const [liveFeedName, setLiveFeedName] = useState('');
   const [liveFeedEmbedAllowed, setLiveFeedEmbedAllowed] = useState(true);
 
-  /* Splash: it lifts once the map has drawn its first frame. It never lifts
-     before the intro has played (about 2.2 s), and never later than 7 s, so a
-     machine that cannot start the map still reaches the platform. */
-  useEffect(() => {
-    const timers = [
-      setTimeout(() => setSplashStage(s => Math.max(s, 1)), 1100),
-      setTimeout(() => setSplashStage(s => Math.max(s, 2)), 1700),
-      setTimeout(() => setShowSplash(false), 7000),
-    ];
-    return () => timers.forEach(clearTimeout);
-  }, []);
-  useEffect(() => {
-    if (!mapReady || splashStage !== 2) return;
-    const t = setTimeout(() => setSplashStage(3), 500);
-    return () => clearTimeout(t);
-  }, [mapReady, splashStage]);
-  useEffect(() => {
-    if (splashStage !== 3) return;
-    // Long enough to read SYSTEM READY before the splash goes.
-    const t = setTimeout(() => setShowSplash(false), 550);
-    return () => clearTimeout(t);
-  }, [splashStage]);
 
   const pushFlight = useCallback((flight: {
     lat: number; lng: number; zoom?: number; duration?: number;
@@ -415,30 +389,19 @@ export default function Dashboard() {
   const runArrival = useCallback((dest: { lat: number; lng: number }, label: string, withDossier: boolean) => {
     clearFlights();
     const startedAt = Date.now();
-    const total = 8300;
-    /* The map opens on the viewer's side of the globe before it has reported a
-       centre; without this the banner's distance starts from nowhere. */
+    const total = 2900; // 2–3 s Moon-dive, per design brief
     const from = mapCenterRef.current ?? {
       lat: 20,
       lng: Math.max(-180, Math.min(180, -new Date().getTimezoneOffset() / 4)),
     };
     setApproach({ target: label, from, to: dest, startedAt, duration: total });
-
-    pushFlight({ ...dest, zoom: 2.3, pitch: 0, duration: 2500, curve: 1.9 });
-    flightTimers.current.push(setTimeout(() => {
-      pushFlight({ ...dest, zoom: 5.8, pitch: 22, bearing: -8, duration: 2200, curve: 1.6 });
-    }, 2550));
-    flightTimers.current.push(setTimeout(() => {
-      pushFlight({ ...dest, zoom: 9.4, pitch: 42, bearing: -15, duration: 1900, curve: 1.35 });
-    }, 4800));
-    flightTimers.current.push(setTimeout(() => {
-      pushFlight({ ...dest, zoom: 12.3, pitch: 54, bearing: -21, duration: 1650, curve: 1.15 });
-    }, 6750));
+    // One continuous dive: the planet rolls beneath the camera (east/west by
+    // shortest path, MapLibre flyTo) and the city resolves at the end.
+    pushFlight({ ...dest, zoom: 11.5, pitch: 48, bearing: -18, duration: total, curve: 1.7 });
     flightTimers.current.push(setTimeout(() => {
       setApproach(null);
       if (withDossier) setShowOrigin(true);
-    }, 8500));
-
+    }, total + 120));
     return () => clearFlights();
   }, [clearFlights, pushFlight]);
 
@@ -478,7 +441,7 @@ export default function Dashboard() {
         tone: 'origin',
         ts: Date.now(),
       });
-    }, 7900));
+    }, 2650));
   }, [splashGone, homeLocation, origin, runArrival]);
 
   useEffect(() => () => clearFlights(), [clearFlights]);
@@ -1140,171 +1103,7 @@ export default function Dashboard() {
   return (
     <main className="fixed inset-0 w-full h-full bg-[var(--bg-void)] overflow-hidden">
 
-      {/* ── SPLASH ── */}
-      <AnimatePresence onExitComplete={() => setSplashGone(true)}>
-        {showSplash && (
-          <motion.div
-            initial={{ opacity: 1 }}
-            // A slight push-through as it fades: the splash gives way to the globe
-            // behind it instead of just dissolving.
-            exit={{ opacity: 0, scale: 1.04 }}
-            transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute inset-0 z-[999] flex flex-col items-center justify-center overflow-hidden"
-            style={{ background: 'radial-gradient(ellipse at center, #0a0a14 0%, var(--bg-void) 70%)' }}
-          >
-
-
-            {/* ── Version badge — top-left ── */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.6 }}
-              transition={{ delay: 0.8, duration: 0.5 }}
-              className="absolute top-6 left-6 z-[2] font-mono text-[11px] tracking-[0.3em] text-[var(--gold-primary)]"
-            >
-              {APP_VERSION}
-            </motion.div>
-
-
-
-            {/* ── Geometric tactical logo ── */}
-            <div className="relative w-40 h-40 mb-8 flex items-center justify-center z-[2]">
-              {/* Outer ring — slow clockwise */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.6, rotate: 0 }}
-                animate={{ opacity: 1, scale: 1, rotate: 360 }}
-                transition={{ opacity: { duration: 0.6 }, scale: { duration: 0.8, ease: 'easeOut' }, rotate: { duration: 20, repeat: Infinity, ease: 'linear' } }}
-                className="absolute inset-0 rounded-full"
-                style={{ border: '1px solid rgba(212,175,55,0.2)' }}
-              >
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full" style={{ background: 'var(--gold-primary)', boxShadow: '0 0 12px var(--gold-primary), 0 0 24px rgba(212,175,55,0.3)' }} />
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-1 h-1 rounded-full" style={{ background: 'rgba(212,175,55,0.5)', boxShadow: '0 0 6px rgba(212,175,55,0.3)' }} />
-              </motion.div>
-
-              {/* Middle ring — faster counter-clockwise */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.4, rotate: 0 }}
-                animate={{ opacity: 1, scale: 1, rotate: -360 }}
-                transition={{ opacity: { duration: 0.6, delay: 0.15 }, scale: { duration: 0.8, delay: 0.15, ease: 'easeOut' }, rotate: { duration: 12, repeat: Infinity, ease: 'linear' } }}
-                className="absolute rounded-full"
-                style={{ inset: '18px', border: '1px solid rgba(0,229,255,0.15)' }}
-              >
-                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full" style={{ background: 'var(--cyan-primary)', boxShadow: '0 0 10px var(--cyan-primary), 0 0 20px rgba(0,229,255,0.2)' }} />
-                <div className="absolute bottom-0 left-1/4 translate-y-1/2 w-1 h-1 rounded-full" style={{ background: 'rgba(0,229,255,0.4)' }} />
-              </motion.div>
-
-              {/* Inner ring — fastest clockwise */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.2, rotate: 0 }}
-                animate={{ opacity: 1, scale: 1, rotate: 360 }}
-                transition={{ opacity: { duration: 0.6, delay: 0.3 }, scale: { duration: 0.8, delay: 0.3, ease: 'easeOut' }, rotate: { duration: 7, repeat: Infinity, ease: 'linear' } }}
-                className="absolute rounded-full"
-                style={{ inset: '40px', border: '1px solid rgba(212,175,55,0.25)' }}
-              >
-                <div className="absolute top-0 left-1/4 -translate-y-1/2 w-1.5 h-1.5 rounded-full" style={{ background: 'var(--gold-primary)', boxShadow: '0 0 8px var(--gold-primary)' }} />
-              </motion.div>
-
-              {/* Core circle + crosshair */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4, duration: 0.6, ease: [0.34, 1.56, 0.64, 1] }}
-                className="relative w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ border: '2px solid var(--gold-primary)', boxShadow: '0 0 20px rgba(212,175,55,0.15), inset 0 0 20px rgba(212,175,55,0.05)' }}
-              >
-                <motion.div
-                  animate={{ opacity: [0.3, 0.8, 0.3] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="w-5 h-5 rounded-full"
-                  style={{ background: 'radial-gradient(circle, rgba(212,175,55,0.4) 0%, rgba(212,175,55,0.05) 70%)' }}
-                />
-                {/* Crosshair lines */}
-                <div className="absolute w-[1px] h-full" style={{ background: 'linear-gradient(to bottom, transparent, rgba(212,175,55,0.3), transparent)' }} />
-                <div className="absolute w-full h-[1px]" style={{ background: 'linear-gradient(to right, transparent, rgba(212,175,55,0.3), transparent)' }} />
-              </motion.div>
-
-              {/* Faint pulsing radar sweep */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0.15, 0], rotate: [0, 360] }}
-                transition={{ opacity: { duration: 3, repeat: Infinity }, rotate: { duration: 3, repeat: Infinity, ease: 'linear' }, delay: 0.6 }}
-                className="absolute inset-[10px] rounded-full"
-                style={{ background: 'conic-gradient(from 0deg, transparent 0deg, rgba(212,175,55,0.15) 40deg, transparent 80deg)' }}
-              />
-            </div>
-
-            {/* ── BADR LIVE EARTH title ── */}
-            <div className="flex flex-col items-center gap-1 mb-3 z-[2]">
-              <div className="flex items-center gap-[2px]">
-                {'BADR'.split('').map((letter, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
-                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                    transition={{ delay: 0.5 + i * 0.08, duration: 0.5, ease: 'easeOut' }}
-                    className="text-4xl md:text-5xl font-bold tracking-[0.5em] font-mono"
-                    style={{ color: 'var(--text-heading)', textShadow: '0 0 30px rgba(212,175,55,0.2)' }}
-                  >
-                    {letter}
-                  </motion.span>
-                ))}
-              </div>
-              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 0.7 }} transition={{ delay: 1.0, duration: 0.5 }} className="text-[10px] font-mono tracking-[0.35em] text-[var(--cyan-primary)]">GMI</motion.span>
-            </div>
-
-            <div className="overflow-hidden mb-8 z-[2]">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: '100%' }}
-                transition={{ delay: 1.2, duration: 0.8, ease: 'easeInOut' }}
-                className="overflow-hidden whitespace-nowrap"
-              >
-                <p className="text-[11px] md:text-[10px] font-mono tracking-[0.5em] text-[var(--gold-primary)]" style={{ opacity: 0.8 }}>
-                  GLOBAL MONITORING & INTELLIGENCE
-                </p>
-              </motion.div>
-            </div>
-
-            {/* ── Multi-stage progress bar ── */}
-            <div className="w-64 md:w-80 z-[2]">
-              {/* Thin progress track */}
-              <div className="relative w-full h-[2px] rounded-full overflow-hidden" style={{ background: 'rgba(212,175,55,0.1)' }}>
-                <motion.div
-                  initial={{ width: '0%' }}
-                  animate={{ width: SPLASH_PROGRESS[splashStage] }}
-                  transition={{ duration: 0.55, delay: splashStage === 0 ? 0.5 : 0, ease: 'easeInOut' }}
-                  className="absolute inset-y-0 left-0 rounded-full"
-                  style={{ background: 'linear-gradient(90deg, var(--gold-primary), var(--cyan-primary), var(--gold-primary))', boxShadow: '0 0 12px rgba(212,175,55,0.4)' }}
-                />
-              </div>
-
-              {/* Status message — one line, swapped as each stage is reached */}
-              <div className="mt-3 h-4 flex items-center justify-center">
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={splashStage}
-                    initial={{ opacity: 0, y: 3 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -3 }}
-                    transition={{ duration: 0.18, delay: splashStage === 0 ? 0.5 : 0 }}
-                    className="text-[10px] font-mono tracking-[0.25em]"
-                    style={{ color: splashStage === 3 ? 'var(--cyan-primary)' : 'var(--text-muted)' }}
-                  >
-                    {SPLASH_STAGES[splashStage]}
-                  </motion.span>
-                </AnimatePresence>
-              </div>
-            </div>
-
-
-
-
-
-
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-
+      {/* STARTUP: no overlay. The map opens far from Earth and the camera\n          dives to the detected IP location (runArrival, ~2.9 s). */}
 
       {/* ── MAP ── */}
       <ErrorBoundary name="Map">
@@ -1345,8 +1144,8 @@ export default function Dashboard() {
 
       {/* ── DIRECTIONS — opens beside the right-hand tool rail ── */}
       <div
-        className="absolute top-3 z-[400] w-[min(92vw,372px)] pointer-events-auto"
-        style={isMobile ? { left: '50%', transform: 'translateX(-50%)' } : { right: '56px' }}
+        className="absolute z-[400] w-[min(92vw,372px)] pointer-events-auto"
+        style={isMobile ? { left: '50%', transform: 'translateX(-50%)' } : { right: '12px', top: '64px' }}
       >
         {navSession ? (
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
@@ -1397,7 +1196,7 @@ export default function Dashboard() {
                 setNavSession({ route: r, label, key: Date.now() });
                 setFollowUser(true);
               }}
-              onLocate={(lat, lng, zoom) => setFlyToLocation({ lat, lng, zoom, ts: Date.now() })}
+              onLocate={(lat, lng, zoom) => setFlyToLocation({ lat, lng, zoom, duration: 2600, ts: Date.now() })}
               onClose={() => { setShowDirections(false); setActiveRoute(null); }}
             />
           </motion.div>
@@ -1426,7 +1225,7 @@ export default function Dashboard() {
       {/* ── MAP VIEW CONTROLS ── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }} transition={hudIn(0.45)}
-        className="absolute bottom-[75px] md:bottom-[100px] z-[200] flex flex-col gap-1.5 pointer-events-none"
+        className="absolute top-3 right-3 z-[200] flex flex-col items-end gap-1.5 pointer-events-none"
         style={{ left: isMobile ? '12px' : '120px' }}
       >
         {/* Unified Control Strip */}
@@ -1450,7 +1249,7 @@ export default function Dashboard() {
       {/* ── HEADER ── */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }} transition={hudIn(0.15)} className={`absolute top-4 z-[200] pointer-events-none flex flex-col`} style={{ left: isMobile ? '24px' : '64px', right: '24px' }}>
         <div className="flex items-center gap-3 w-fit">
-          <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-lg bg-[var(--gold-primary)] flex items-center justify-center font-mono font-bold text-black text-sm tracking-widest shadow-[0_0_12px_rgba(212,175,55,0.4)]">A</div>
+          <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-lg bg-[var(--gold-primary)] flex items-center justify-center font-mono font-bold text-black text-sm tracking-widest shadow-[0_0_12px_rgba(212,175,55,0.4)]">B</div>
           <div className="flex flex-col items-start gap-0.5">
             <h1 className="text-lg md:text-xl font-bold tracking-[0.35em] text-[var(--gold-primary)] font-mono">BADR LIVE EARTH</h1>
             <span className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] opacity-80 uppercase text-[var(--cyan-primary)]">GLOBAL MONITORING & INTELLIGENCE</span>
@@ -1470,21 +1269,21 @@ export default function Dashboard() {
 
 
       {/* ── RIGHT TOOL STRIP (desktop only — mobile uses bottom nav) ── */}
-      {!isMobile && <motion.div initial={{ opacity: 0, x: 12 }} animate={revealed ? { opacity: 1, x: 0 } : { opacity: 0, x: 12 }} transition={hudIn(0.3)} className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-[250] pointer-events-auto bg-black/40 backdrop-blur-sm p-1 rounded-full border border-white/5">
+      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="absolute left-1/2 -translate-x-1/2 bottom-[76px] flex flex-row gap-1.5 z-[250] pointer-events-auto bg-black/55 backdrop-blur-md px-2 py-1.5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
         <div className="relative group">
           <button onClick={() => { setShowIntel(!showIntel); setShowAlerts(false); }} className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showIntel ? 'bg-[var(--cyan-primary)]/20' : 'hover:bg-white/10'}`} title="OSINT Recon — IP lookup, network sweep, geolocation" aria-label="OSINT Recon" aria-expanded={showIntel}>
             <Radar className={`w-4 h-4 ${showIntel ? 'text-[var(--cyan-primary)]' : 'text-white/60'}`} />
             {showIntel && (
               <span
                 aria-hidden="true"
-                className="absolute -right-1 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-full bg-current text-[var(--cyan-primary)]"
+                className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full bg-current text-[var(--cyan-primary)]"
               />
             )}
           </button>
-          <span className="absolute right-11 top-1/2 -translate-y-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white/80 bg-black/80 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">RECON</span>
+          <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">RECON</span>
           <AnimatePresence>
             {showIntel && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute right-12 top-1/2 -translate-y-1/2 w-80">
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="fixed right-3 top-[76px] w-[min(92vw,344px)] z-[260]">
                 <OsintPanel seed={reconSeed} onSweepVisualize={setSweepData} onScanGeolocate={(target, data) => {
                   setScanTargets(prev => {
                     const existing = prev.filter(t => t.id !== target);
@@ -1508,14 +1307,14 @@ export default function Dashboard() {
             {showSpaceCam && (
               <span
                 aria-hidden="true"
-                className="absolute -right-1 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-full bg-current text-[#00E5FF]"
+                className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full bg-current text-[#00E5FF]"
               />
             )}
           </button>
-          <span className="absolute right-11 top-1/2 -translate-y-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white/80 bg-black/80 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">SPACE</span>
+          <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">SPACE</span>
           <AnimatePresence>
             {showSpaceCam && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute right-12 top-1/2 -translate-y-1/2 w-80">
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="fixed right-3 top-[76px] w-[min(92vw,344px)] z-[260]">
                 <SpaceCam />
               </motion.div>
             )}
@@ -1530,14 +1329,14 @@ export default function Dashboard() {
             {showAlerts && (
               <span
                 aria-hidden="true"
-                className="absolute -right-1 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-full bg-current text-[#FF3D3D]"
+                className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full bg-current text-[#FF3D3D]"
               />
             )}
           </button>
-          <span className="absolute right-11 top-1/2 -translate-y-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white/80 bg-black/80 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">ALERTS</span>
+          <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">ALERTS</span>
           <AnimatePresence>
             {showAlerts && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute right-12 top-1/2 -translate-y-1/2 w-80">
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="fixed right-3 top-[76px] w-[min(92vw,344px)] z-[260]">
                 <LiveAlerts data={data} onLocate={(lat, lng, options) => setFlyToLocation({ lat, lng, zoom: options?.zoom, alertId: options?.alertId, ts: Date.now() })} pinsOn={activeLayers.alert_pins} onTogglePins={on => setActiveLayers(prev => ({ ...prev, alert_pins: on }))} onPinnedChange={setPinnedAlertIds} onWatchFeed={(url, name) => { setLiveFeedUrl(url); setLiveFeedName(name); }} onRefresh={() => fetchEndpoint('/api/news', newsTransform)} />
               </motion.div>
             )}
@@ -1552,11 +1351,11 @@ export default function Dashboard() {
             {showDirections && (
               <span
                 aria-hidden="true"
-                className="absolute -right-1 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-full bg-current text-[var(--gold-primary)]"
+                className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full bg-current text-[var(--gold-primary)]"
               />
             )}
           </button>
-          <span className="absolute right-11 top-1/2 -translate-y-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white/80 bg-black/80 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">ROUTE</span>
+          <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">ROUTE</span>
         </div>
 
         <div className="relative group">
@@ -1565,20 +1364,20 @@ export default function Dashboard() {
             {showDesktopSearch && (
               <span
                 aria-hidden="true"
-                className="absolute -right-1 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-full bg-current text-[var(--gold-primary)]"
+                className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full bg-current text-[var(--gold-primary)]"
               />
             )}
           </button>
-          <span className="absolute right-11 top-1/2 -translate-y-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white/80 bg-black/80 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">SEARCH</span>
+          <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">SEARCH</span>
           <AnimatePresence>
             {showDesktopSearch && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute right-12 top-1/2 -translate-y-1/2 w-80">
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="fixed right-3 top-[76px] w-[min(92vw,344px)] z-[260]">
                 <SearchBar
                   alwaysExpanded
                   center={mapCenter}
                   resolving={resolving}
                   onTeleport={(t) => { void teleport(t); setShowDesktopSearch(false); }}
-                  onLocate={(lat, lng, zoom) => { setFlyToLocation({ lat, lng, zoom, ts: Date.now() }); setShowDesktopSearch(false); }}
+                  onLocate={(lat, lng, zoom) => { setFlyToLocation({ lat, lng, zoom, duration: 2600, ts: Date.now() }); setShowDesktopSearch(false); }}
                 />
               </motion.div>
             )}
@@ -1690,8 +1489,8 @@ export default function Dashboard() {
           banner takes the same slot while the camera is in motion, so the
           story reads top to bottom — traverse, arrive, explain. */}
       <div
-        className="absolute z-[245] pointer-events-none flex justify-center px-3"
-        style={{ left: 0, right: 0, bottom: isMobile ? 86 : 104 }}
+        className="absolute z-[245] pointer-events-none flex px-3"
+        style={isMobile ? { left: 0, right: 0, bottom: 150, justifyContent: 'center' } : { left: 8, top: 92, justifyContent: 'flex-start' }}
       >
         <div className="pointer-events-auto flex justify-center">
           <AnimatePresence mode="wait">

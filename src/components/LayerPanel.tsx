@@ -337,17 +337,17 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
   /* ── DESKTOP ── */
   return (
     <motion.div
-      initial={{ x: -60, opacity: 0 }}
-      animate={revealed ? { x: 0, opacity: 1 } : { x: -60, opacity: 0 }}
+      initial={{ y: 40, opacity: 0, x: '-50%' }}
+      animate={revealed ? { y: 0, opacity: 1, x: '-50%' } : { y: 40, opacity: 0, x: '-50%' }}
       transition={{ type: 'spring', damping: 30, stiffness: 200, delay: 0.25 }}
-      className="absolute top-0 left-0 h-full w-[48px] flex flex-col items-center pt-24 pb-6 z-50 pointer-events-auto"
+      className="absolute bottom-3 left-1/2 flex flex-row items-center px-2.5 py-1.5 z-[240] pointer-events-auto rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
       style={{
-        background: 'rgba(0,0,0,0.15)',
+        background: 'rgba(0,0,0,0.55)',
         backdropFilter: 'blur(24px) saturate(1.2)',
         WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
       }}
     >
-      <div className="flex-1 flex flex-col items-center gap-1">
+      <div className="flex flex-row items-center gap-1">
         {visibleGroups.map((group) => {
           /* Sub-layers modify a parent rather than draw anything of their own,
              so they do not count towards the rail's reading. */
@@ -391,7 +391,7 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
                       ? 'rgba(255,255,255,0.75)'
                       : isOpen
                         ? 'rgba(255,255,255,0.45)'
-                        : 'rgba(255,255,255,0.22)',
+                        : 'rgba(255,255,255,0.55)',
                     filter: groupActive ? 'drop-shadow(0 0 4px rgba(255,255,255,0.3))' : 'none',
                   }}
                 />
@@ -416,11 +416,11 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
               <AnimatePresence>
                 {isOpen && (
                   <motion.div
-                    initial={{ opacity: 0, x: -8, filter: 'blur(4px)' }}
-                    animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                    exit={{ opacity: 0, x: -4, filter: 'blur(2px)' }}
+                    initial={{ opacity: 0, y: 8, x: '-50%', filter: 'blur(4px)' }}
+                    animate={{ opacity: 1, y: 0, x: '-50%', filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: 4, x: '-50%', filter: 'blur(2px)' }}
                     transition={{ duration: 0.18, ease: 'easeOut' }}
-                    className="absolute left-[52px] top-1/2 -translate-y-1/2 min-w-[220px] rounded-xl p-3 z-[100] pointer-events-auto"
+                    className="absolute bottom-[58px] left-1/2 min-w-[230px] rounded-xl p-3 z-[100] pointer-events-auto"
                     style={{
                       background: 'rgba(0,0,0,0.6)',
                       backdropFilter: 'blur(40px) saturate(1.5)',
@@ -491,7 +491,7 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
       </div>
 
       {/* Subtle separator */}
-      <div className="w-5 h-px bg-white/[0.06] my-2" />
+      <div className="w-px h-5 bg-white/[0.08] mx-1.5" />
 
       {/* Style Studio */}
       <button
@@ -506,7 +506,7 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
           style={{
             width: 15,
             height: 15,
-            color: studioOpen ? 'var(--gold-primary)' : 'rgba(255,255,255,0.15)',
+            color: studioOpen ? 'var(--gold-primary)' : 'rgba(255,255,255,0.55)',
             filter: studioOpen ? 'drop-shadow(0 0 6px var(--gold-glow))' : 'none',
           }}
         />
@@ -530,7 +530,7 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
             style={{
               width: 15,
               height: 15,
-              color: theme === 'ghost' ? '#B388FF' : 'rgba(255,255,255,0.15)',
+              color: theme === 'ghost' ? '#B388FF' : 'rgba(255,255,255,0.55)',
               filter: theme === 'ghost' ? 'drop-shadow(0 0 6px rgba(179, 136, 255, 0.5))' : 'none',
             }}
           />
