@@ -283,7 +283,7 @@ export default function Dashboard() {
   const [osirisTheme, setOsirisTheme] = useState<'core'|'ghost'>('core');
 
   useEffect(() => {
-    document.body.className = osirisTheme === 'core' ? '' : `theme-${osirisTheme}`;
+    document.body.className = ''; // core theme only — ghost/violet theme removed
   }, [osirisTheme]);
 
   /* Style Studio overrides are inline on <body>, so they survive the theme
@@ -1264,12 +1264,12 @@ export default function Dashboard() {
 
 
       {/* ── NEW SIDEBAR (Root Level) ── */}
-      {showLayers && !isMobile && <LayerPanel {...terrainPanelProps} revealed={revealed} data={data} activeLayers={activeLayers} setActiveLayers={setActiveLayers} theme={osirisTheme} setTheme={setOsirisTheme} capabilities={capabilities} />}
+      {showLayers && !isMobile && <LayerPanel {...terrainPanelProps} revealed={revealed} data={data} activeLayers={activeLayers} setActiveLayers={setActiveLayers} theme={osirisTheme} capabilities={capabilities} />}
 
 
 
       {/* ── RIGHT TOOL STRIP (desktop only — mobile uses bottom nav) ── */}
-      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="absolute left-1/2 -translate-x-1/2 bottom-[76px] flex flex-row gap-1.5 z-[250] pointer-events-auto bg-black/55 backdrop-blur-md px-2 py-1.5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
+      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="absolute left-1/2 -translate-x-1/2 bottom-[74px] flex flex-row flex-wrap justify-center max-w-[97vw] gap-1.5 z-[250] pointer-events-auto bg-black/55 backdrop-blur-md px-2 py-1.5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
         <div className="relative group">
           <button onClick={() => { setShowIntel(!showIntel); setShowAlerts(false); }} className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showIntel ? 'bg-[var(--cyan-primary)]/20' : 'hover:bg-white/10'}`} title="OSINT Recon — IP lookup, network sweep, geolocation" aria-label="OSINT Recon" aria-expanded={showIntel}>
             <Radar className={`w-4 h-4 ${showIntel ? 'text-[var(--cyan-primary)]' : 'text-white/60'}`} />
@@ -1622,7 +1622,7 @@ export default function Dashboard() {
                           <div><div className="hud-label" style={{fontSize:'9px'}}>NUC</div><div className="hud-value text-[10px]" style={{color:'var(--accent-nuclear)'}}>{(data.infrastructure?.length||0)}</div></div>
                         </div>
                       </div>
-                      <LayerPanel {...terrainPanelProps} data={data} activeLayers={activeLayers} setActiveLayers={setActiveLayers} isMobile={true} theme={osirisTheme} setTheme={setOsirisTheme} capabilities={capabilities} />
+                      <LayerPanel {...terrainPanelProps} data={data} activeLayers={activeLayers} setActiveLayers={setActiveLayers} isMobile={true} theme={osirisTheme} capabilities={capabilities} />
                       <div className="mt-8">
                         <ViewPresets onNavigate={(lat, lng, zoom) => { setFlyToLocation({ lat, lng, zoom, ts: Date.now() }); setMobilePanel(null); }} />
                       </div>

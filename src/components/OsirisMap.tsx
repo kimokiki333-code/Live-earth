@@ -355,14 +355,9 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
         customAttribution: 'Geocoding © OpenStreetMap contributors',
       } as const,
       maxPitch: 85,
-      transformRequest: (url: string) => {
-        // Route all CARTO CDN requests through the internal Next.js proxy API
-        if (url.includes('cartocdn.com')) {
-          const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-          return { url: `${baseUrl}/api/proxy-tiles?url=${encodeURIComponent(url)}` };
-        }
-        return { url };
-      },
+      // Basemap loads directly from CARTO (CORS-enabled). A previous version
+      // rewrote every CARTO request to /api/proxy-tiles - a route that does
+      // not exist - which left the globe black. No transformRequest.
     };
 
     // MapLibre asks for a high-performance WebGL2 context and throws outright if it

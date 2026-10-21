@@ -4,9 +4,8 @@ import { memo, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plane, Satellite, Sun, AlertTriangle, Camera,
-  Ship, Network, Ghost, Megaphone, SlidersHorizontal
+  Ship, Network, Megaphone
 } from 'lucide-react';
-import StyleStudio from './StyleStudio';
 import { TERRAIN_MIN_ZOOM, type TerrainStatus } from '@/lib/map-terrain';
 
 interface LayerPanelProps {
@@ -197,7 +196,6 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
    * far edge closes the thing you were reaching for.
    */
   const [pinnedGroup, setPinnedGroup] = useState<string | null>(null);
-  const [studioOpen, setStudioOpen] = useState(false);
 
   useEffect(() => {
     if (!pinnedGroup) return;
@@ -215,7 +213,7 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
       <p role="status">{terrainStatus === 'idle' ? `Terrain at zoom ${TERRAIN_MIN_ZOOM}+ · zoom in` : terrainStatus === 'waiting' ? 'Terrain starts when you stop moving' : terrainStatus === 'loading' ? 'Loading nearby terrain…' : terrainStatus === 'error' ? 'Terrain unavailable; the map is still usable.' : 'Terrain on'}</p>
       {terrainStatus === 'idle' && <button type="button" onClick={onTerrainFocus} className="mt-2 min-h-8 rounded border border-white/15 px-2 text-[var(--gold-primary)] hover:bg-white/10">Zoom to terrain</button>}
       {terrainStatus === 'error' && <button type="button" onClick={onTerrainRetry} className="mt-2 min-h-8 rounded border border-white/15 px-2 text-[var(--gold-primary)] hover:bg-white/10">Retry terrain</button>}
-      <p className="mt-2 text-white/35">Nearby detail only · cached tiles</p>
+      <p className="mt-2 text-[#C9CEDA]">Nearby detail only · cached tiles</p>
       <a className="mt-1 inline-block underline underline-offset-2" href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener noreferrer">Terrain credits</a>
     </div>
   ) : null;
@@ -280,10 +278,10 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
                     <ToggleSwitch active={!!isLayerActive} />
                     <span className={`text-[11px] font-mono uppercase tracking-wider flex-1 transition-colors ${isLayerActive ? 'text-white/80' : 'text-white/40'}`}>
                       {layer.label}
-                      {layer.description && <span className="block mt-0.5 text-[9px] normal-case tracking-normal text-white/35">{layer.description}</span>}
+                      {layer.description && <span className="block mt-0.5 text-[9px] normal-case tracking-normal text-[#C9CEDA]">{layer.description}</span>}
                     </span>
                     {count !== null && (
-                      <span className="text-[10px] font-mono tabular-nums text-white/25">
+                      <span className="text-[10px] font-mono tabular-nums text-[#C9CEDA]">
                         {count.toLocaleString()}
                       </span>
                     )}
@@ -295,41 +293,6 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
           </div>
         ))}
 
-        {/* MOBILE STYLE STUDIO */}
-        <div className="flex items-center justify-between mt-2 pt-3 border-t border-white/[0.06] px-1">
-          <span className="text-[10px] font-mono tracking-[0.2em] text-white/25 uppercase">Style Studio</span>
-          <button
-            onClick={() => setStudioOpen(o => !o)}
-            aria-pressed={studioOpen}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
-            style={{
-              background: studioOpen ? 'var(--hover-accent)' : 'transparent',
-              boxShadow: studioOpen ? '0 0 12px var(--gold-glow)' : 'none',
-            }}
-          >
-            <SlidersHorizontal className="w-4 h-4" style={{ color: studioOpen ? 'var(--gold-primary)' : 'rgba(255,255,255,0.25)' }} />
-          </button>
-        </div>
-        <AnimatePresence>
-          {studioOpen && <StyleStudio isMobile onClose={() => setStudioOpen(false)} />}
-        </AnimatePresence>
-
-        {/* MOBILE GHOST TOGGLE */}
-        {setTheme && (
-          <div className="flex items-center justify-between pt-3 border-t border-white/[0.06] px-1">
-            <span className="text-[10px] font-mono tracking-[0.2em] text-white/25 uppercase">Ghost Protocol</span>
-            <button
-              onClick={() => setTheme(theme === 'core' ? 'ghost' : 'core')}
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
-              style={{
-                background: theme === 'ghost' ? 'rgba(179, 136, 255, 0.15)' : 'transparent',
-                boxShadow: theme === 'ghost' ? '0 0 12px rgba(179, 136, 255, 0.3)' : 'none',
-              }}
-            >
-              <Ghost className="w-4 h-4" style={{ color: theme === 'ghost' ? '#B388FF' : 'rgba(255,255,255,0.25)' }} />
-            </button>
-          </div>
-        )}
       </div>
     );
   }
@@ -340,14 +303,14 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
       initial={{ y: 40, opacity: 0, x: '-50%' }}
       animate={revealed ? { y: 0, opacity: 1, x: '-50%' } : { y: 40, opacity: 0, x: '-50%' }}
       transition={{ type: 'spring', damping: 30, stiffness: 200, delay: 0.25 }}
-      className="absolute bottom-3 left-1/2 flex flex-row items-center px-2.5 py-1.5 z-[240] pointer-events-auto rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
+      className="absolute bottom-3 left-1/2 flex flex-row flex-wrap justify-center max-w-[97vw] items-center px-2.5 py-1.5 z-[240] pointer-events-auto rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
       style={{
         background: 'rgba(0,0,0,0.55)',
         backdropFilter: 'blur(24px) saturate(1.2)',
         WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
       }}
     >
-      <div className="flex flex-row items-center gap-1">
+      <div className="flex flex-row flex-wrap justify-center items-center gap-1">
         {visibleGroups.map((group) => {
           /* Sub-layers modify a parent rather than draw anything of their own,
              so they do not count towards the rail's reading. */
@@ -430,7 +393,7 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
                     }}
                   >
                     <div className="flex items-center gap-2 mb-2.5 pb-1.5 border-b border-white/[0.04]">
-                      <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-white/35 flex-1">
+                      <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-[#C9CEDA] flex-1">
                         {group.fullLabel}
                       </span>
                       {/* Switching eight satellite layers one at a time is the
@@ -468,12 +431,12 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
                           >
                             {layer.parent && <SubLayerStem />}
                             <ToggleSwitch active={!!isLayerActive} />
-                            <span className={`text-[11px] font-mono uppercase tracking-wider flex-1 transition-colors duration-200 ${isLayerActive ? 'text-white/70' : 'text-white/35'}`}>
+                            <span className={`text-[11px] font-mono uppercase tracking-wider flex-1 transition-colors duration-200 ${isLayerActive ? 'text-white/70' : 'text-[#C9CEDA]'}`}>
                               {layer.label}
-                              {layer.description && <span className="block mt-0.5 text-[9px] normal-case tracking-normal text-white/35">{layer.description}</span>}
+                              {layer.description && <span className="block mt-0.5 text-[9px] normal-case tracking-normal text-[#C9CEDA]">{layer.description}</span>}
                             </span>
                             {count !== null && (
-                              <span className={`text-[10px] font-mono tabular-nums transition-colors ${isLayerActive ? 'text-white/45' : 'text-white/20'}`}>
+                              <span className={`text-[10px] font-mono tabular-nums transition-colors ${isLayerActive ? 'text-white/45' : 'text-white/70'}`}>
                                 {count.toLocaleString()}
                               </span>
                             )}
@@ -490,52 +453,6 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
         })}
       </div>
 
-      {/* Subtle separator */}
-      <div className="w-px h-5 bg-white/[0.08] mx-1.5" />
-
-      {/* Style Studio */}
-      <button
-        onClick={() => setStudioOpen(o => !o)}
-        aria-pressed={studioOpen}
-        className="w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-500 cursor-pointer"
-        style={{ background: studioOpen ? 'var(--hover-accent)' : 'transparent' }}
-        title="Style Studio"
-      >
-        <SlidersHorizontal
-          className="transition-all duration-500"
-          style={{
-            width: 15,
-            height: 15,
-            color: studioOpen ? 'var(--gold-primary)' : 'rgba(255,255,255,0.55)',
-            filter: studioOpen ? 'drop-shadow(0 0 6px var(--gold-glow))' : 'none',
-          }}
-        />
-      </button>
-      <AnimatePresence>
-        {studioOpen && <StyleStudio onClose={() => setStudioOpen(false)} />}
-      </AnimatePresence>
-
-      {/* Ghost Protocol Toggle */}
-      {setTheme && (
-        <button
-          onClick={() => setTheme(theme === 'core' ? 'ghost' : 'core')}
-          className="w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-500 cursor-pointer"
-          style={{
-            background: theme === 'ghost' ? 'rgba(179, 136, 255, 0.1)' : 'transparent',
-          }}
-          title="Ghost Protocol"
-        >
-          <Ghost
-            className="transition-all duration-500"
-            style={{
-              width: 15,
-              height: 15,
-              color: theme === 'ghost' ? '#B388FF' : 'rgba(255,255,255,0.55)',
-              filter: theme === 'ghost' ? 'drop-shadow(0 0 6px rgba(179, 136, 255, 0.5))' : 'none',
-            }}
-          />
-        </button>
-      )}
     </motion.div>
   );
 }
