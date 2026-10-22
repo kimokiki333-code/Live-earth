@@ -16,8 +16,18 @@ export async function GET(req: Request) {
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) return NextResponse.json({ error: `Celestrak returned ${res.status}` }, { status: 502 });
-    const rows = await res.json();
-    const row = Array.isArray(rows) ? rows[0] : null;
+    const rows = await res.json().catch(() => []);
+    let row = Array.isArray(rows) ? rows[0] : null;
+    if (!row?.TLE_LINE1 || !row?.TLE_LINE2) {
+      // Celestrak refused: find the TLE in SatNOGS' list instead.
+      const alt = await fetch('https://db.satnogs.org/api/tle/', {
+        headers: { 'User-Agent': 'BADR-LIVE-EARTH/1.0', Accept: 'application/json' },
+        signal: AbortSignal.timeout(30000),
+      }).catch(() => null);
+      const list = alt?.ok ? await alt.json().catch(() => []) : [];
+      const hit = (Array.isArray(list) ? list : []).find((r: any) => Number(String(r.tle1 || '').substring(2, 7)) === Number(id));
+      if (hit) row = { OBJECT_NAME: String(hit.tle0 || '').replace(/^0\s+/, ''), TLE_LINE1: hit.tle1, TLE_LINE2: hit.tle2 };
+    }
     if (!row?.TLE_LINE1 || !row?.TLE_LINE2) return NextResponse.json({ error: 'Satellite not in catalogue' }, { status: 404 });
 
     const from = atRaw && !Number.isNaN(Date.parse(atRaw)) ? new Date(atRaw) : new Date();
