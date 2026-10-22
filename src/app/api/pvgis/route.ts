@@ -75,7 +75,11 @@ async function tryOpenMeteo(lat: number, lon: number, kwp: number, tilt: number,
       // equation of time (minutes) + longitude shift → local solar time
       const B = (2 * Math.PI * (n - 81)) / 364;
       const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
-      const solarTime = hourUtc + 0.5 + lon / 15 + eot / 60;
+      // Open-Meteo stamps radiation as the average of the PRECEDING hour,
+      // so the stamped hour's energy is centred half an hour BEFORE it.
+      // (+0.5 here shifted the sun a full hour against the data and showed
+      // up as a false 15% east-facing loss in cairo — verified by test.)
+      const solarTime = hourUtc - 0.5 + lon / 15 + eot / 60;
       const hourAngle = 15 * D2R * (solarTime - 12);
       // Direct-normal is absent for some hours in the archive; derive it from
       // the horizontal beam (GHI − diffuse) over cos(zenith) when needed.
@@ -211,9 +215,16 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const lat = Number(searchParams.get('lat'));
   const lon = Number(searchParams.get('lon'));
-  const kwp = Math.min(1000, Math.max(0.1, Number(searchParams.get('kwp')) || 5));
-  const tilt = Math.min(90, Math.max(0, Number(searchParams.get('tilt')) || 30));
-  const azimuth = Math.min(180, Math.max(-180, Number(searchParams.get('azimuth')) || 0));
+  // NB: `Number(x) || fallback` would silently replace a real 0 (flat roof,
+  // due south) with the default — parse explicitly so 0 stays 0.
+  const num = (v: string | null, fallback: number) => {
+    if (v === null || v === '') return fallback;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+  const kwp = Math.min(1000, Math.max(0.1, num(searchParams.get('kwp'), 5)));
+  const tilt = Math.min(90, Math.max(0, num(searchParams.get('tilt'), 30)));
+  const azimuth = Math.min(180, Math.max(-180, num(searchParams.get('azimuth'), 0)));
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     return NextResponse.json({ error: 'Valid lat/lon are required' }, { status: 400 });
   }
