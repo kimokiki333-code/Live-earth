@@ -59,11 +59,13 @@ async function tryOpenMeteo(lat: number, lon: number, kwp: number, tilt: number,
       attempts.push('open-meteo: unexpected payload'); return null;
     }
 
+    if (times.length < 8000) { attempts.push(`open-meteo: only ${times.length} hourly rows`); return null; }
     const monthlyPoa = new Array(12).fill(0); // Wh/m²
     let used = 0;
     for (let i = 0; i < times.length; i++) {
-      const g = ghi[i], df = dhi[i], dn = dni[i];
-      if (g == null || df == null || dn == null || g <= 0) continue;
+      const g = ghi[i], df = dhi[i];
+      // Night hours and missing rows contribute nothing — skip without failing.
+      if (g == null || df == null || g <= 0) continue;
       // times are "2023-03-15T13:00" in UTC
       const month = Number(times[i].slice(5, 7));
       const day = Number(times[i].slice(8, 10));
@@ -75,6 +77,14 @@ async function tryOpenMeteo(lat: number, lon: number, kwp: number, tilt: number,
       const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
       const solarTime = hourUtc + 0.5 + lon / 15 + eot / 60;
       const hourAngle = 15 * D2R * (solarTime - 12);
+      // Direct-normal is absent for some hours in the archive; derive it from
+      // the horizontal beam (GHI − diffuse) over cos(zenith) when needed.
+      let dn = dni[i];
+      if (dn == null) {
+        const phi = lat * D2R;
+        const cosZ = Math.sin(phi) * Math.sin(decl) + Math.cos(phi) * Math.cos(decl) * Math.cos(hourAngle);
+        dn = cosZ > 0.02 ? Math.max(0, (g - df) / cosZ) : 0;
+      }
       const cosT = Math.max(0, cosIncidence(lat, tilt, azimuth, decl, hourAngle));
       const poa =
         dn * cosT +
@@ -83,7 +93,9 @@ async function tryOpenMeteo(lat: number, lon: number, kwp: number, tilt: number,
       monthlyPoa[month - 1] += poa; // W/m² over the hour ≈ Wh/m²
       used++;
     }
-    if (used < 8000) { attempts.push(`open-meteo: only ${used} usable hours`); return null; }
+    if (used < 3000 || monthlyPoa.reduce((s, v) => s + v, 0) <= 0) {
+      attempts.push(`open-meteo: only ${used} sunlit hours`); return null;
+    }
 
     const monthly = monthlyPoa.map((wh, i) => ({ month: i + 1, kwh: Math.round((wh / 1000) * kwp * (1 - LOSS)) }));
     const annual = monthly.reduce((s, m) => s + m.kwh, 0);

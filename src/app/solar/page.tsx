@@ -77,7 +77,7 @@ export default function SolarStep1() {
           <div className="w-9 h-9 rounded-lg bg-[#D4AF37] text-black flex items-center justify-center font-mono font-bold">S</div>
           <div>
             <h1 className="font-mono font-bold tracking-[0.25em] text-[#D4AF37]">SOLAR DESIGNER</h1>
-            <p className="text-[11px] font-mono text-[#C9CEDA]">STEP 1 — ENGINE PROOF · place + roof → panels → real production (PVGIS)</p>
+            <p className="text-[11px] font-mono text-[#C9CEDA]">STEP 1 — ENGINE PROOF · place + roof → panels → real production</p>
           </div>
         </div>
 
@@ -127,7 +127,7 @@ export default function SolarStep1() {
 
             <button onClick={calculate} disabled={loading || panels === 0}
               className="w-full py-3 rounded-xl bg-[#D4AF37] text-black font-mono font-bold text-sm tracking-wider disabled:opacity-50 hover:bg-[#e5c65a] transition-colors">
-              {loading ? 'CONTACTING PVGIS…' : 'CALCULATE PRODUCTION'}
+              {loading ? 'CONTACTING SATELLITE DATA…' : 'CALCULATE PRODUCTION'}
             </button>
             {error && <p className="text-[12px] font-mono text-red-400 border border-red-500/30 bg-red-500/10 rounded-lg px-3 py-2">{error}</p>}
           </section>
@@ -137,7 +137,7 @@ export default function SolarStep1() {
             {!result && !loading && (
               <div className="h-full flex flex-col items-center justify-center text-center py-16">
                 <p className="font-mono text-white/50 text-sm">Pick a place, size the roof, press CALCULATE.</p>
-                <p className="font-mono text-white/30 text-[11px] mt-2 max-w-sm">The numbers will come from the European Commission's PVGIS satellite database — the real engine test for Step 1.</p>
+                <p className="font-mono text-white/30 text-[11px] mt-2 max-w-sm">The numbers come from satellite-era radiation data (Open-Meteo / ERA5 archive, PVGIS cross-checked where reachable) — the real engine test for Step 1.</p>
               </div>
             )}
             {loading && <div className="h-full flex items-center justify-center py-16"><p className="font-mono text-[#D4AF37] text-sm animate-pulse">Fetching satellite-derived solar data…</p></div>}
