@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { computeYieldInBrowser } from '@/lib/solarYield';
 
 /**
  * SOLAR DESIGNER — STEP 1 PROOF
@@ -57,13 +58,28 @@ export default function SolarStep1() {
 
   async function calculate() {
     setLoading(true); setError(''); setResult(null);
+    const la = Number(lat), lo = Number(lon);
     try {
-      const res = await fetch(`/api/pvgis?lat=${lat}&lon=${lon}&kwp=${kwp.toFixed(2)}&tilt=${tilt}&azimuth=${azimuth}`);
+      // Preferred: our server engine (cached, cross-checks PVGIS).
+      const res = await fetch(`/api/pvgis?lat=${la}&lon=${lo}&kwp=${kwp.toFixed(2)}&tilt=${tilt}&azimuth=${azimuth}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Engine returned ${res.status}`);
       setResult(data);
-    } catch (e: any) {
-      setError(e?.message || 'Engine unreachable');
+      return;
+    } catch (apiErr: any) {
+      // On purely static hosting (e.g. InfinityFree) there is no /api —
+      // run the identical engine in the browser instead of failing.
+      try {
+        const local = await computeYieldInBrowser(la, lo, Number(kwp.toFixed(2)), tilt, azimuth);
+        setResult({
+          location: { lat: la, lon: lo },
+          system: { kwp: Number(kwp.toFixed(2)), tilt, azimuth, loss: 14 },
+          ...local,
+        });
+        return;
+      } catch {
+        setError(apiErr?.message || 'Engine unreachable');
+      }
     } finally { setLoading(false); }
   }
 
@@ -137,7 +153,7 @@ export default function SolarStep1() {
             {!result && !loading && (
               <div className="h-full flex flex-col items-center justify-center text-center py-16">
                 <p className="font-mono text-white/50 text-sm">Pick a place, size the roof, press CALCULATE.</p>
-                <p className="font-mono text-white/30 text-[11px] mt-2 max-w-sm">The numbers come from satellite-era radiation data (Open-Meteo / ERA5 archive, PVGIS cross-checked where reachable) — the real engine test for Step 1.</p>
+                <p className="font-mono text-white/30 text-[11px] mt-2 max-w-sm">The numbers come from satellite-era radiation data (Open-Meteo / ERA5 archive) — computed by our server, or directly in your browser with the same engine where no server exists (static hosting).</p>
               </div>
             )}
             {loading && <div className="h-full flex items-center justify-center py-16"><p className="font-mono text-[#D4AF37] text-sm animate-pulse">Fetching satellite-derived solar data…</p></div>}
