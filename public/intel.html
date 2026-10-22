@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PEOPLE INTEL — Email Intelligence</title>
+<meta name="description" content="What is publicly knowable about an email address: registered accounts, public profile, breach exposure." />
+<style>
+  :root{
+    --bg:#05070D; --panel:rgba(255,255,255,.04); --line:rgba(255,255,255,.1);
+    --gold:#D4AF37; --teal:#2DD4BF; --red:#FF4D5E; --green:#2EEA8C;
+    --text:#EDEFF5; --muted:#9AA3B5; --mono:'JetBrains Mono','Cascadia Code',Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:Inter,'Segoe UI',system-ui,sans-serif;min-height:100vh;
+    background-image:radial-gradient(900px 500px at 70% -10%,rgba(212,175,55,.10),transparent 60%),radial-gradient(700px 500px at 10% 0%,rgba(45,212,191,.07),transparent 60%);}
+  .wrap{max-width:880px;margin:0 auto;padding:36px 18px 60px}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .logo{width:46px;height:46px;border-radius:13px;background:linear-gradient(145deg,#F3D27A,var(--gold));color:#0A0C12;
+    display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:800;font-size:22px;box-shadow:0 8px 30px rgba(212,175,55,.25)}
+  h1{font-family:var(--mono);letter-spacing:.28em;font-size:20px;color:#fff}
+  h1 .accent{color:var(--gold)}
+  .tag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--muted)}
+  .sub{color:var(--muted);font-size:13.5px;line-height:1.65;margin:10px 0 26px;max-width:640px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;backdrop-filter:blur(6px)}
+  .search{display:flex;gap:10px;flex-wrap:wrap}
+  .search input{flex:1;min-width:240px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;color:#fff;font-family:var(--mono);font-size:14px;outline:none}
+  .search input:focus{border-color:var(--gold)}
+  .search button{background:linear-gradient(145deg,#F3D27A,var(--gold));color:#0A0C12;border:none;border-radius:12px;
+    padding:14px 26px;font-family:var(--mono);font-weight:800;letter-spacing:.12em;font-size:13px;cursor:pointer}
+  .search button:disabled{opacity:.55;cursor:wait}
+  .hint{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:12px;line-height:1.7}
+  .err{display:none;margin-top:16px;border:1px solid rgba(255,77,94,.4);background:rgba(255,77,94,.08);color:#FFB3BA;
+    border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:12px}
+  #results{display:none;margin-top:22px}
+  .strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .stat .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;color:var(--muted)}
+  .stat .v{font-family:var(--mono);font-size:21px;font-weight:800;margin-top:6px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:14px}
+  .panel h2{font-family:var(--mono);font-size:11px;letter-spacing:.22em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .panel h2::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
+  .profile{display:flex;gap:16px;align-items:flex-start}
+  .profile img{width:74px;height:74px;border-radius:50%;border:2px solid rgba(45,212,191,.5)}
+  .profile .name{font-size:17px;font-weight:700}
+  .profile .meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px}
+  .profile .about{font-size:13px;color:#C7CEDD;line-height:1.65;margin-top:10px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+  .chip{font-family:var(--mono);font-size:11px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);
+    background:rgba(255,255,255,.04);color:var(--text);text-decoration:none}
+  a.chip:hover{border-color:var(--gold);color:var(--gold)}
+  .acct{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border:1px solid var(--line);
+    border-radius:12px;margin-bottom:8px;background:rgba(255,255,255,.02)}
+  .acct .site{font-family:var(--mono);font-size:12.5px;font-weight:700}
+  .acct .detail{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .acct a{color:var(--gold);font-family:var(--mono);font-size:11px;text-decoration:none}
+  .checks{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+  .checks td{padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.06)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px}
+  .breach-names{font-family:var(--mono);font-size:11.5px;line-height:2;color:#FFC2C8}
+  .breach-names span{border:1px solid rgba(255,77,94,.35);background:rgba(255,77,94,.08);padding:3px 8px;border-radius:6px;margin:0 4px 4px 0;display:inline-block}
+  footer{margin-top:28px;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.9;border-top:1px solid var(--line);padding-top:16px}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,0,0,.25);border-top-color:#0A0C12;border-radius:50%;animation:sp 0.7s linear infinite;vertical-align:-2px;margin-right:8px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media(max-width:640px){.strip{grid-template-columns:1fr 1fr}h1{font-size:16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">P</div>
+    <div>
+      <h1>PEOPLE <span class="accent">INTEL</span></h1>
+      <div class="tag">TOOL 01 · EMAIL INTELLIGENCE</div>
+    </div>
+  </header>
+
+  <p class="sub">Type an email address. In seconds: where that address is registered, its public profile,
+     whether its domain accepts mail at all, and whether it has been exposed in known data breaches.
+     Public data only — the same sources, named openly below.</p>
+
+  <div class="card">
+    <div class="search">
+      <input id="email" type="email" placeholder="name@example.com" autocomplete="off" spellcheck="false" />
+      <button id="go">INVESTIGATE</button>
+    </div>
+    <div class="hint">Registered-account checks in the style of Holehe / Blackbird, reimplemented keyless ·
+      profile: Gravatar · breaches: XposedOrNot · domain: Cloudflare DNS. Nothing is guessed — a service that
+      refuses to answer is reported as “unknown”, never as “not found”.</div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div id="results">
+    <div class="strip">
+      <div class="stat"><div class="k">DOMAIN ACCEPTS MAIL</div><div class="v" id="st-mx">—</div></div>
+      <div class="stat"><div class="k">ACCOUNTS FOUND</div><div class="v" id="st-acct" style="color:var(--teal)">—</div></div>
+      <div class="stat"><div class="k">BREACH STATUS</div><div class="v" id="st-breach">—</div></div>
+    </div>
+
+    <div class="panel" id="p-gravatar" style="display:none;color:var(--teal)">
+      <h2 style="color:var(--teal)">PUBLIC PROFILE — GRAVATAR</h2>
+      <div class="profile">
+        <img id="g-avatar" alt="avatar" />
+        <div style="flex:1">
+          <div class="name" id="g-name"></div>
+          <div class="meta" id="g-meta"></div>
+          <div class="about" id="g-about"></div>
+          <div class="chips" id="g-accounts"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="p-accounts" style="display:none">
+      <h2 style="color:var(--teal)">REGISTERED ACCOUNTS</h2>
+      <div id="acct-list"></div>
+    </div>
+
+    <div class="panel">
+      <h2 style="color:var(--gold)">EVERY CHECK, HONESTLY</h2>
+      <table class="checks" id="checks"></table>
+      <div class="hint" id="handle-hint" style="margin-top:12px"></div>
+    </div>
+
+    <div class="panel" id="p-breaches" style="display:none;border-color:rgba(255,77,94,.35)">
+      <h2 style="color:var(--red)">BREACH EXPOSURE</h2>
+      <div class="breach-names" id="breach-list"></div>
+      <div class="hint" id="breach-exposed" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <footer>
+    PEOPLE INTEL · a standalone front-end. The brain runs at badr-live-earth.vercel.app/api/osint/email —
+    this page works from any static host.<br/>
+    Data sources: Gravatar · Duolingo · Mozilla accounts · Spotify · Microsoft · GitHub · XposedOrNot · Cloudflare DoH.
+    Technique credit: Holehe (megadose) &amp; Blackbird, reimplemented from scratch. Public data only — verify before you act on it.
+  </footer>
+</div>
+
+<script>
+  // Same-origin when served next to the API; the Vercel brain when hosted anywhere else (e.g. InfinityFree).
+  const API_BASE = (location.hostname.endsWith('vercel.app') || location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? '' : 'https://badr-live-earth.vercel.app';
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  $('go').addEventListener('click', run);
+  $('email').addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+
+  async function run() {
+    const email = $('email').value.trim().toLowerCase();
+    const err = $('err');
+    err.style.display = 'none';
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      err.textContent = 'That does not look like a valid email address.';
+      err.style.display = 'block';
+      return;
+    }
+    const btn = $('go');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>WORKING';
+    $('results').style.display = 'none';
+    try {
+      const res = await fetch(`${API_BASE}/api/osint/email?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Engine returned ${res.status}`);
+      render(data);
+    } catch (e) {
+      err.textContent = e.message || 'Engine unreachable.';
+      err.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'INVESTIGATE';
+    }
+  }
+
+  function render(r) {
+    $('st-mx').textContent = r.domain_deliverable === null ? 'UNKNOWN' : r.domain_deliverable ? 'YES' : 'NO';
+    $('st-mx').style.color = r.domain_deliverable ? 'var(--green)' : r.domain_deliverable === false ? 'var(--red)' : 'var(--muted)';
+    $('st-acct').textContent = `${r.found_count} / ${r.checked_count}`;
+    $('st-breach').textContent = r.breached === null ? 'UNKNOWN' : r.breached ? 'EXPOSED' : 'CLEAN';
+    $('st-breach').style.color = r.breached ? 'var(--red)' : r.breached === false ? 'var(--green)' : 'var(--muted)';
+
+    // Gravatar profile
+    const g = r.gravatar;
+    if (g && g.registered) {
+      $('g-avatar').src = g.avatar || '';
+      $('g-name').textContent = g.name || g.username || r.email;
+      $('g-meta').textContent = [g.username ? '@' + g.username : '', g.location || ''].filter(Boolean).join(' · ');
+      $('g-about').textContent = g.about || '';
+      $('g-accounts').innerHTML = (g.accounts || []).map(a =>
+        `<a class="chip" href="${esc(a.url)}" target="_blank" rel="noreferrer">${esc(a.service)}</a>`).join('')
+        + (g.profile_url ? `<a class="chip" href="${esc(g.profile_url)}" target="_blank" rel="noreferrer">gravatar profile ↗</a>` : '');
+      $('p-gravatar').style.display = 'block';
+    } else {
+      $('p-gravatar').style.display = 'none';
+    }
+
+    // Registered accounts
+    const found = (r.accounts || []).filter(a => a.status === 'found');
+    $('acct-list').innerHTML = found.map(a => `
+      <div class="acct">
+        <div><span class="site">${esc(a.site)}</span> ${a.detail ? `<span class="detail">· ${esc(a.detail)}</span>` : ''}</div>
+        ${a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noreferrer">open ↗</a>` : ''}
+      </div>`).join('');
+    $('p-accounts').style.display = found.length ? 'block' : 'none';
+
+    // Every check, honestly
+    const rows = [];
+    rows.push({ site: 'Gravatar profile', status: g ? (g.registered ? 'found' : 'not_found') : 'unknown' });
+    for (const a of r.accounts || []) rows.push(a);
+    rows.push({ site: 'Domain mail (MX)', status: r.domain_deliverable === null ? 'unknown' : r.domain_deliverable ? 'found' : 'not_found', label: r.domain_deliverable ? 'accepts mail' : 'no mail server' });
+    rows.push({ site: 'Breach databases', status: r.breached === null ? 'unknown' : r.breached ? 'found' : 'not_found', label: r.breached ? `${(r.breaches || []).length} breaches` : 'no breaches' });
+    const dot = s => s === 'found' ? 'var(--green)' : s === 'not_found' ? '#5B6474' : '#F5C542';
+    const label = s => s === 'found' ? 'FOUND' : s === 'not_found' ? 'NOT FOUND' : 'UNKNOWN';
+    $('checks').innerHTML = rows.map(a => `
+      <tr><td><span class="dot" style="background:${dot(a.status)}"></span>${esc(a.site)}</td>
+      <td style="text-align:right;color:${dot(a.status)}">${esc(a.label || label(a.status))}</td></tr>`).join('');
+    $('handle-hint').textContent = r.username_hint
+      ? `Next step an investigator takes: hunt the handle “${r.username_hint}” across social platforms.`
+      : '';
+
+    // Breaches
+    if (r.breached && (r.breaches || []).length) {
+      $('breach-list').innerHTML = r.breaches.map(b => `<span>${esc(b)}</span>`).join('');
+      $('breach-exposed').textContent = (r.data_exposed || []).length
+        ? `Data exposed in those breaches: ${r.data_exposed.join(', ')}` : '';
+      $('p-breaches').style.display = 'block';
+    } else {
+      $('p-breaches').style.display = 'none';
+    }
+
+    $('results').style.display = 'block';
+    $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+</script>
+</body>
+</html>

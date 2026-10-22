@@ -11,11 +11,25 @@ export const maxDuration = 30;
  * lib/emailChecks and is individually testable at
  * /api/osint/email/check/<name>?email=... (verified one by one first,
  * per step-by-step discipline).
+ *
+ * CORS is open so the standalone PEOPLE INTEL site (public/intel.html)
+ * can call this brain from any static host (e.g. InfinityFree).
  */
+
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
 export async function GET(req: Request) {
   const email = (new URL(req.url).searchParams.get('email') || '').trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 254) {
-    return NextResponse.json({ error: 'A valid email address is required' }, { status: 400 });
+    return NextResponse.json({ error: 'A valid email address is required' }, { status: 400, headers: CORS });
   }
   const [local, domain] = email.split('@');
 
@@ -44,5 +58,5 @@ export async function GET(req: Request) {
     breaches: breaches?.breaches ?? [],
     data_exposed: breaches?.data_exposed ?? [],
     sources: ['Gravatar', 'Duolingo', 'Mozilla accounts', 'Spotify', 'Microsoft', 'GitHub', 'XposedOrNot', 'Cloudflare DoH'],
-  }, { headers: { 'Cache-Control': 'public, s-maxage=3600' } });
+  }, { headers: { ...CORS, 'Cache-Control': 'public, s-maxage=3600' } });
 }
