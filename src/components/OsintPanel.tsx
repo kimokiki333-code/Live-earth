@@ -8,7 +8,7 @@ import {
   Search, Radar, Globe, Shield, FileText, Radio,
   ChevronDown, ChevronUp, Loader2, AlertTriangle, Server,
   Wifi, Lock, MapPin, Bug, Code, Layers, Network, Fingerprint,
-  CheckCircle, XCircle, Clock, ExternalLink, Crosshair,
+  CheckCircle, XCircle, Clock, ExternalLink, Crosshair, Mail,
   Maximize2, Minimize2, Gavel, Bitcoin, Phone, Terminal, ShieldAlert, User
 } from 'lucide-react';
 import { ipToNumber, numberToIp, calculateSubnetStart, classifyDevice, assessRisk, batchFetch, ShodanInternetDBResponse, SweepDevice } from '@/lib/osint-utils';
@@ -61,6 +61,7 @@ const TABS: ToolDef[] = [
   { id: 'github', label: 'GITHUB RECON', icon: Terminal, placeholder: 'GitHub username', color: '#87CEEB', group: 'identity', blurb: 'Profile, repos and contacts' },
   { id: 'phone', label: 'PHONE INTEL', icon: Phone, placeholder: 'Phone number (e.g. +1...)', color: '#FF9500', group: 'identity', blurb: 'Carrier, region and line type' },
   { id: 'fingerprint', label: 'FINGERPRINT', icon: Fingerprint, placeholder: 'Username, email or phone', color: '#3B82F6', group: 'identity', blurb: 'Public profile search, streamed live' },
+  { id: 'email', label: 'EMAIL INTEL', icon: Mail, placeholder: 'Email address', color: '#2DD4BF', group: 'identity', blurb: 'Registered accounts, Gravatar profile & breaches' },
 
   { id: 'threats', label: 'THREATS', icon: AlertTriangle, placeholder: 'IP, domain, or hash', color: '#FF9500', group: 'threat', blurb: 'Reputation across feeds' },
   { id: 'leaks', label: 'DATA LEAKS', icon: ShieldAlert, placeholder: 'Email address', color: '#E040FB', group: 'threat', blurb: 'Breach exposure for an address' },
@@ -332,6 +333,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
         case 'crypto': url = `/api/osint/crypto?address=${encodeURIComponent(q)}`; break;
         case 'username': url = `/api/osint/username?username=${encodeURIComponent(q)}`; break;
         case 'github': url = `/api/osint/github?user=${encodeURIComponent(q)}`; break;
+        case 'email': url = `/api/osint/email?email=${encodeURIComponent(q)}`; break;
         case 'vuln': url = `/api/scanner?target=${encodeURIComponent(q)}&type=vuln`; break;
         case 'scanner': url = `/api/scanner?target=${encodeURIComponent(q)}&type=${scanType}`; break;
         case 'headers': url = `/api/scanner?target=${encodeURIComponent(q)}&type=headers`; break;
@@ -384,7 +386,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
           if (data.lat && data.lng && onScanGeolocate) {
              onScanGeolocate(q, { lat: data.lat, lng: data.lng, type: 'phone', region: data.region });
           }
-        } else if (t !== 'sweep' && t !== 'vuln' && t !== 'crypto' && t !== 'username' && t !== 'mac' && t !== 'bgp' && t !== 'github' && t !== 'leaks' && t !== 'phone') {
+        } else if (t !== 'sweep' && t !== 'vuln' && t !== 'crypto' && t !== 'username' && t !== 'mac' && t !== 'bgp' && t !== 'github' && t !== 'leaks' && t !== 'phone' && t !== 'email') {
           fetch(`/api/osint/ip?ip=${encodeURIComponent(q)}`)
             .then(r => r.json())
             .then(locData => {
@@ -1046,6 +1048,81 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
               </div>
             </div>
           )}
+        </div>
+      );
+    }
+
+    // ── EMAIL INTEL ──
+    if (activeTab === 'email') {
+      const ACCENT = '#2DD4BF';
+      const foundAccounts = (r.accounts || []).filter((a: any) => a.status === 'found');
+      const ruledOut = (r.accounts || []).filter((a: any) => a.status === 'not_found').map((a: any) => a.site);
+      return (
+        <div>
+          <SectionHeader title="EMAIL INTEL" icon={Mail} color={ACCENT} />
+          <ResultRow label="Email Target" value={r.email} color={ACCENT} />
+          <ResultRow label="Domain" value={r.domain} />
+          <ResultRow label="Domain Accepts Mail" value={r.domain_deliverable === null ? 'UNKNOWN' : r.domain_deliverable ? 'YES (MX FOUND)' : 'NO MX RECORD'} color={r.domain_deliverable ? '#00E676' : r.domain_deliverable === false ? '#FF3D3D' : undefined} />
+          <ResultRow label="Accounts Found" value={`${r.found_count} of ${r.checked_count} checked`} color={foundAccounts.length ? ACCENT : undefined} />
+          <ResultRow label="Handle Hint" value={r.username_hint ? `try USERNAME hunt on "${r.username_hint}"` : null} />
+
+          {r.gravatar?.registered && (
+            <div className="mt-2 p-2 border rounded" style={{ borderColor: `${ACCENT}44`, background: `${ACCENT}0d` }}>
+              <span className="text-[10px] font-mono font-bold block mb-1.5" style={{ color: ACCENT }}>GRAVATAR PROFILE</span>
+              <div className="flex items-center gap-3 mb-1.5">
+                {r.gravatar.avatar && <img src={r.gravatar.avatar} alt="gravatar" className="w-10 h-10 rounded-full border" style={{ borderColor: `${ACCENT}55` }} />}
+                <div>
+                  <div className="text-[11px] font-mono font-bold text-[#E8E6E0]">{r.gravatar.name || r.gravatar.username || '—'}</div>
+                  {r.gravatar.location && <div className="text-[10px] font-mono text-[var(--text-muted)]">{r.gravatar.location}</div>}
+                </div>
+              </div>
+              {r.gravatar.about && <p className="text-[10px] font-mono text-[#C9CEDA] leading-relaxed mb-1.5">{r.gravatar.about}</p>}
+              {r.gravatar.accounts?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {r.gravatar.accounts.map((a: any) => (
+                    <a key={a.service} href={a.url} target="_blank" rel="noreferrer" className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#1A1A18] text-[#E8E6E0] border hover:text-white transition-colors" style={{ borderColor: `${ACCENT}33` }}>{a.service}</a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {foundAccounts.length > 0 && (
+            <div className="mt-2 p-2 border rounded" style={{ borderColor: `${ACCENT}44`, background: `${ACCENT}0d` }}>
+              <span className="text-[10px] font-mono font-bold block mb-1" style={{ color: ACCENT }}>REGISTERED ACCOUNTS ({foundAccounts.length})</span>
+              <div className="flex flex-col gap-1">
+                {foundAccounts.map((a: any) => (
+                  <div key={a.site} className="flex items-center justify-between text-[10px] font-mono px-2 py-1 rounded bg-[#1A1A18]">
+                    <span className="text-[#E8E6E0]">{a.site}{a.detail ? <span className="text-[var(--text-muted)]"> · {a.detail}</span> : null}</span>
+                    {a.url && <a href={a.url} target="_blank" rel="noreferrer" className="hover:text-white" style={{ color: ACCENT }}><ExternalLink className="w-2.5 h-2.5" /></a>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {ruledOut.length > 0 && (
+            <ResultRow label="Ruled Out" value={ruledOut.join(', ')} />
+          )}
+
+          <ResultRow label="Breach Status" value={r.breached === null ? 'UNKNOWN' : r.breached ? 'COMPROMISED' : 'NO KNOWN BREACH'} color={r.breached ? '#FF1744' : r.breached === false ? '#00E676' : undefined} />
+          {r.breached && r.breaches?.length > 0 && (
+            <div className="mt-2 p-2 border border-red-500/30 bg-red-500/10 rounded">
+              <span className="text-[11px] font-mono text-red-400 font-bold mb-1 block">KNOWN BREACHES ({r.breaches.length})</span>
+              <div className="flex flex-wrap gap-1">
+                {r.breaches.slice(0, 20).map((b: string) => (
+                  <span key={b} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#1A1A18] text-red-300 border border-red-500/20">{b}</span>
+                ))}
+              </div>
+              {r.data_exposed?.length > 0 && (
+                <div className="text-[9px] font-mono text-[var(--text-muted)] mt-1.5">Exposed: {r.data_exposed.join(', ')}</div>
+              )}
+            </div>
+          )}
+
+          <p className="text-[9px] font-mono text-[var(--text-muted)] mt-3 leading-relaxed">
+            Account-existence checks in the style of Holehe/Blackbird, reimplemented keyless · breaches: XposedOrNot · Gravatar profile is public by design. A "not found" means the service answered no; "unknown" services are never guessed.
+          </p>
         </div>
       );
     }
