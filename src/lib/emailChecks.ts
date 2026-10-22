@@ -78,7 +78,12 @@ export async function checkDuolingo(email: string): Promise<AccountCheck> {
     const { ok, data } = await fetchJson(`https://www.duolingo.com/2017-06-30/users?email=${encodeURIComponent(email)}`);
     if (!ok) return { site: 'Duolingo', status: 'unknown' };
     const user = data?.users?.[0];
-    if (user) return { site: 'Duolingo', status: 'found', detail: `username: ${user.username}`, url: `https://www.duolingo.com/profile/${user.username}` };
+    if (user) {
+      const uname = user.username || user.name || '';
+      return uname
+        ? { site: 'Duolingo', status: 'found', detail: `username: ${uname}`, url: `https://www.duolingo.com/profile/${uname}` }
+        : { site: 'Duolingo', status: 'found', detail: 'account exists' };
+    }
     return { site: 'Duolingo', status: 'not_found' };
   } catch { return { site: 'Duolingo', status: 'unknown' }; }
 }
