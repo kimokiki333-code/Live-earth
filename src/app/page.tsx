@@ -10,7 +10,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Layers, Newspaper, Search, X, Globe, MapPinned, Route, Radar, Satellite, Moon, ExternalLink, AlertTriangle, Radio } from 'lucide-react';
+import { Layers, Newspaper, Search, X, Globe, MapPinned, Route, Radar, Satellite, Moon, ExternalLink, AlertTriangle } from 'lucide-react';
 import { type TerrainStatus } from '@/lib/map-terrain';
 import { loadCameraCatalog, mergeCameraCatalog } from '@/lib/camera-catalog';
 import SearchBar from '@/components/SearchBar';
@@ -27,7 +27,6 @@ import KeyboardShortcuts from '@/components/KeyboardShortcuts';
 import LiveAlerts from '@/components/LiveAlerts';
 const OsirisMap = dynamic(() => import('@/components/OsirisMap'), { ssr: false });
 const LayerPanel = dynamic(() => import('@/components/LayerPanel'));
-const SpaceCam = dynamic(() => import('@/components/SpaceCam'), { ssr: false });
 const CameraViewer = dynamic(() => import('@/components/CameraViewer'));
 const OsintPanel = dynamic(() => import('@/components/OsintPanel'));
 import { pickLandingCity } from '@/lib/landing-cities';
@@ -176,10 +175,11 @@ export default function Dashboard() {
   const [spaceWeather, setSpaceWeather] = useState<any>(null);
   const [showLayers, setShowLayers] = useState(true);
   const [showAlerts, setShowAlerts] = useState(false);
-  const [showSpaceCam, setShowSpaceCam] = useState(false);
   const [showIntel, setShowIntel] = useState(false);
   const [showDesktopSearch, setShowDesktopSearch] = useState(false);
   const [showDirections, setShowDirections] = useState(false);
+  /** Bumped whenever a tool panel opens, so the layer dock drops its flyout — one panel open at a time, nothing covering anything else. */
+  const [layerCloseSignal, setLayerCloseSignal] = useState(0);
   const [activeRoute, setActiveRoute] = useState<
     (RouteResult & {
       from: { lat: number; lng: number };
@@ -643,7 +643,7 @@ export default function Dashboard() {
       }
       if (e.key === 'l') setShowLayers(p => !p);
       if (e.key === 'i') setShowIntel(p => !p);
-      if (e.key === 's') { setShowDesktopSearch(p => !p); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false); }
+      if (e.key === 's') { setShowDesktopSearch(p => !p); setShowIntel(false); setShowAlerts(false); }
       if (e.key === 'r' && !e.ctrlKey && !e.metaKey) setFlyToLocation({ lat: 20, lng: 0, zoom: 2.5, ts: Date.now() });
       if (e.key === 'g') {
         setActiveLayers(prev => ({ ...prev, terrain_elevation: false, terrain_3d: false }));
@@ -651,7 +651,7 @@ export default function Dashboard() {
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
-        setShowDesktopSearch(true); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false);
+        setShowDesktopSearch(true); setShowIntel(false); setShowAlerts(false);
       }
     };
     const fsHandler = () => setIsFullscreen(!!document.fullscreenElement);
@@ -1146,7 +1146,7 @@ export default function Dashboard() {
       {/* ── DIRECTIONS — opens beside the right-hand tool rail ── */}
       <div
         className="absolute z-[400] w-[min(92vw,372px)] pointer-events-auto"
-        style={isMobile ? { left: '50%', transform: 'translateX(-50%)' } : { right: '12px', top: '64px' }}
+        style={isMobile ? { left: '50%', transform: 'translateX(-50%)' } : { right: '12px', top: '92px' }}
       >
         {navSession ? (
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
@@ -1261,14 +1261,14 @@ export default function Dashboard() {
 
 
       {/* ── NEW SIDEBAR (Root Level) ── */}
-      {showLayers && !isMobile && <LayerPanel {...terrainPanelProps} revealed={revealed} data={data} activeLayers={activeLayers} setActiveLayers={setActiveLayers} theme={osirisTheme} capabilities={capabilities} />}
+      {showLayers && !isMobile && <LayerPanel {...terrainPanelProps} revealed={revealed} data={data} activeLayers={activeLayers} setActiveLayers={setActiveLayers} theme={osirisTheme} capabilities={capabilities} closeSignal={layerCloseSignal} />}
 
 
 
       {/* ── RIGHT TOOL STRIP (desktop only — mobile uses bottom nav) ── */}
-      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="absolute left-1/2 -translate-x-1/2 bottom-3 flex flex-row flex-wrap justify-center max-w-[97vw] gap-2.5 z-[250] pointer-events-auto bg-black/55 backdrop-blur-md px-2.5 py-1.5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
+      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="absolute left-1/2 -translate-x-1/2 bottom-3 flex flex-row flex-wrap justify-center max-w-[97vw] gap-10 z-[250] pointer-events-auto bg-black/55 backdrop-blur-md px-5 py-1.5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
         <div className="relative group">
-          <button onClick={() => { setShowIntel(!showIntel); setShowAlerts(false); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showIntel ? 'bg-[var(--cyan-primary)]/20' : 'hover:bg-white/10'}`} title="OSINT Recon — IP lookup, network sweep, geolocation" aria-label="OSINT Recon" aria-expanded={showIntel}>
+          <button onClick={() => { const next = !showIntel; setShowIntel(next); setShowAlerts(false); setShowDesktopSearch(false); if (next) { setShowDirections(false); setLayerCloseSignal(v => v + 1); } }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showIntel ? 'bg-[var(--cyan-primary)]/20' : 'hover:bg-white/10'}`} title="Recon Toolkit — 20 intelligence tools (opens full-screen)" aria-label="OSINT Recon" aria-expanded={showIntel}>
             <Radar className={`w-4 h-4 ${showIntel ? 'text-[var(--cyan-primary)]' : 'text-white/60'}`} />
             {showIntel && (
               <span
@@ -1278,50 +1278,13 @@ export default function Dashboard() {
             )}
           </button>
           <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">RECON</span>
-          <AnimatePresence>
-            {showIntel && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute bottom-[54px] right-0 w-[min(92vw,344px)] z-[260]">
-                <OsintPanel seed={reconSeed} onSweepVisualize={setSweepData} onScanGeolocate={(target, data) => {
-                  setScanTargets(prev => {
-                    const existing = prev.filter(t => t.id !== target);
-                    return [{ id: target, timestamp: Date.now(), ...data }, ...existing].slice(0, 10);
-                  });
-                  flyToTarget(
-                    data.lat,
-                    data.lng,
-                    String(target),
-                    [data.city, data.country].filter(Boolean).join(' · ') || undefined,
-                  );
-                }} />
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
-        <div className="relative group">
-          <button onClick={() => { setShowIntel(false); setShowAlerts(false); setShowSpaceCam(v => !v); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showSpaceCam ? 'bg-[#00E5FF]/20' : 'hover:bg-white/10'}`} title="Live from Space — 24/7 video downlink from the ISS" aria-label="Live from Space" aria-expanded={showSpaceCam}>
-            <Radio className={`w-4 h-4 ${showSpaceCam ? 'text-[#00E5FF]' : 'text-white/60'}`} />
-            {showSpaceCam && (
-              <span
-                aria-hidden="true"
-                className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full bg-current text-[#00E5FF]"
-              />
-            )}
-          </button>
-          <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">SPACE</span>
-          <AnimatePresence>
-            {showSpaceCam && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute bottom-[54px] right-0 w-[min(92vw,344px)] z-[260]">
-                <SpaceCam />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
 
         
 
         <div className="relative group">
-          <button onClick={() => { setShowAlerts(!showAlerts); setShowIntel(false); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showAlerts ? 'bg-[#FF3D3D]/20' : 'hover:bg-white/10'}`} title="Live Alerts — earthquakes, conflicts, breaking news" aria-label="Live Alerts" aria-expanded={showAlerts}>
+          <button onClick={() => { const next = !showAlerts; setShowAlerts(next); setShowIntel(false); setShowDesktopSearch(false); if (next) { setShowDirections(false); setLayerCloseSignal(v => v + 1); } }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showAlerts ? 'bg-[#FF3D3D]/20' : 'hover:bg-white/10'}`} title="Live Alerts — earthquakes, conflicts, breaking news" aria-label="Live Alerts" aria-expanded={showAlerts}>
             <AlertTriangle className={`w-4 h-4 ${showAlerts ? 'text-[#FF3D3D]' : 'text-white/60'}`} />
             {showAlerts && (
               <span
@@ -1331,19 +1294,12 @@ export default function Dashboard() {
             )}
           </button>
           <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">ALERTS</span>
-          <AnimatePresence>
-            {showAlerts && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute bottom-[54px] right-0 w-[min(92vw,344px)] z-[260]">
-                <LiveAlerts data={data} onLocate={(lat, lng, options) => setFlyToLocation({ lat, lng, zoom: options?.zoom, alertId: options?.alertId, ts: Date.now() })} pinsOn={activeLayers.alert_pins} onTogglePins={on => setActiveLayers(prev => ({ ...prev, alert_pins: on }))} onPinnedChange={setPinnedAlertIds} onWatchFeed={(url, name) => { setLiveFeedUrl(url); setLiveFeedName(name); }} onRefresh={() => fetchEndpoint('/api/news', newsTransform)} />
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
         
 
         <div className="relative group">
-          <button onClick={() => { setShowDirections(!showDirections); if (showDirections) { setActiveRoute(null); } setShowDesktopSearch(false); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDirections ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Directions — turn-by-turn routing" aria-label="Directions" aria-expanded={showDirections}>
+          <button onClick={() => { const next = !showDirections; setShowDirections(next); if (!next) { setActiveRoute(null); } setShowDesktopSearch(false); setShowIntel(false); setShowAlerts(false); if (next) setLayerCloseSignal(v => v + 1); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDirections ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Directions — turn-by-turn routing" aria-label="Directions" aria-expanded={showDirections}>
             <Route className={`w-4 h-4 ${showDirections ? 'text-[var(--gold-primary)]' : 'text-white/60'}`} />
             {showDirections && (
               <span
@@ -1356,7 +1312,7 @@ export default function Dashboard() {
         </div>
 
         <div className="relative group">
-          <button onClick={() => { setShowDesktopSearch(!showDesktopSearch); setShowIntel(false); setShowAlerts(false); setShowSpaceCam(false); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDesktopSearch ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Search — find locations, cities, coordinates" aria-label="Search" aria-expanded={showDesktopSearch}>
+          <button onClick={() => { const next = !showDesktopSearch; setShowDesktopSearch(next); setShowIntel(false); setShowAlerts(false); if (next) { setShowDirections(false); setLayerCloseSignal(v => v + 1); } }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDesktopSearch ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Search — find locations, cities, coordinates" aria-label="Search" aria-expanded={showDesktopSearch}>
             <Search className={`w-4 h-4 ${showDesktopSearch ? 'text-[var(--gold-primary)]' : 'text-white/60'}`} />
             {showDesktopSearch && (
               <span
@@ -1390,6 +1346,36 @@ export default function Dashboard() {
 
 
       </motion.div>}
+
+      {/* ── RECON TOOLKIT — big centre pop-up (all 20 tools visible) ── */}
+      {showIntel && !isMobile && (
+        <OsintPanel seed={reconSeed} startFullScreen onClose={() => setShowIntel(false)} onSweepVisualize={setSweepData} onScanGeolocate={(target, data) => {
+          setScanTargets(prev => {
+            const existing = prev.filter(t => t.id !== target);
+            return [{ id: target, timestamp: Date.now(), ...data }, ...existing].slice(0, 10);
+          });
+          flyToTarget(
+            data.lat,
+            data.lng,
+            String(target),
+            [data.city, data.country].filter(Boolean).join(' · ') || undefined,
+          );
+        }} />
+      )}
+
+      {/* ── LIVE ALERTS — top-left pop-up, same shelf as the route planner ── */}
+      <AnimatePresence>
+        {showAlerts && !isMobile && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute left-3 top-[92px] z-[300] w-[min(92vw,368px)] max-h-[calc(100vh-190px)] overflow-y-auto styled-scrollbar pointer-events-auto"
+          >
+            <LiveAlerts data={data} onLocate={(lat, lng, options) => setFlyToLocation({ lat, lng, zoom: options?.zoom, alertId: options?.alertId, ts: Date.now() })} pinsOn={activeLayers.alert_pins} onTogglePins={on => setActiveLayers(prev => ({ ...prev, alert_pins: on }))} onPinnedChange={setPinnedAlertIds} onWatchFeed={(url, name) => { setLiveFeedUrl(url); setLiveFeedName(name); }} onRefresh={() => fetchEndpoint('/api/news', newsTransform)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── LIVE FEED VIEWER OVERLAY ── */}
       <AnimatePresence>

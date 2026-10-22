@@ -71,6 +71,8 @@ const TABS: ToolDef[] = [
 interface OsintPanelProps {
   isOpen?: boolean;
   onClose?: () => void;
+  /** Open straight into the big centre view instead of the small card. */
+  startFullScreen?: boolean;
   isMobile?: boolean;
   onSweepVisualize?: (data: any) => void;
   onScanGeolocate?: (target: string, data: any) => void;
@@ -82,9 +84,9 @@ interface OsintPanelProps {
   seed?: { query: string; tab?: string; seq: number } | null;
 }
 
-function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed }: OsintPanelProps) {
+function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, onClose, startFullScreen }: OsintPanelProps) {
   const [activeTab, setActiveTab] = useState('scanner');
-  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(Boolean(startFullScreen));
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -130,10 +132,10 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed }: 
   // way out that isn't hunting for the button.
   useEffect(() => {
     if (!isFullScreen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullScreen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (onClose) onClose(); else setIsFullScreen(false); } };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isFullScreen]);
+  }, [isFullScreen, onClose]);
 
   const matchesFilter = useCallback((t: ToolDef) => {
     const q = toolFilter.trim().toLowerCase();
@@ -1810,7 +1812,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed }: 
           <div className="flex items-center justify-between px-6 py-3.5 border-b border-[var(--border-secondary)] bg-[#111] flex-shrink-0">
             <div className="flex items-center gap-3 min-w-0">
               <Radar className="w-5 h-5 text-[var(--cyan-primary)] flex-shrink-0" />
-              <span className="hud-text text-[16px] text-[var(--text-primary)]">OSIRIS RECON TOOLKIT</span>
+              <span className="hud-text text-[16px] text-[var(--text-primary)]">BADR RECON TOOLKIT</span>
               <span className="gotham-tag gotham-tag--classified" style={{ fontSize: '9px' }}>{TABS.length} MODULES</span>
               {currentTab && (
                 <>
@@ -1824,7 +1826,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed }: 
                 </>
               )}
             </div>
-            <button onClick={() => setIsFullScreen(false)} className="p-2 hover:bg-white/5 rounded transition-colors text-[var(--text-muted)] hover:text-white flex-shrink-0" title="Exit expanded view (Esc)">
+            <button onClick={() => { if (onClose) onClose(); else setIsFullScreen(false); }} className="p-2 hover:bg-white/5 rounded transition-colors text-[var(--text-muted)] hover:text-white flex-shrink-0" title="Close toolkit (Esc)">
               <Minimize2 className="w-5 h-5" />
             </button>
           </div>

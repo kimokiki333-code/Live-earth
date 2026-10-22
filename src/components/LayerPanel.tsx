@@ -4,7 +4,7 @@ import { memo, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plane, Satellite, Sun, AlertTriangle, Camera,
-  Ship, Network, Megaphone
+  Ship, Network, Megaphone, Radar
 } from 'lucide-react';
 import { TERRAIN_MIN_ZOOM, type TerrainStatus } from '@/lib/map-terrain';
 
@@ -24,6 +24,9 @@ interface LayerPanelProps {
   on3DModeSelected?: () => void;
   /** False while the splash is up; the rail slides in when it turns true. */
   revealed?: boolean;
+  /** Bumped by the page whenever a tool panel opens, so this dock's flyout
+   *  closes instead of sitting underneath (or on top of) the new panel. */
+  closeSignal?: number;
 }
 
 interface LayerDef {
@@ -49,9 +52,9 @@ interface LayerGroupDef {
 
 const LAYER_GROUPS: LayerGroupDef[] = [
   {
-    label: 'SDK',
-    fullLabel: 'OSIRIS SDK',
-    icon: Network,
+    label: 'RADAR',
+    fullLabel: 'LIVE RADARS',
+    icon: Radar,
     layers: [
       { key: 'sdk_sea', label: 'Maritime Ships', dataKey: 'sdk_entities' },
     ],
@@ -188,7 +191,7 @@ function SubLayerStem() {
   );
 }
 
-function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'core', setTheme, capabilities = {}, terrainStatus = 'idle', onTerrainRetry, onTerrainFocus, on3DModeSelected, revealed = true }: LayerPanelProps) {
+function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'core', setTheme, capabilities = {}, terrainStatus = 'idle', onTerrainRetry, onTerrainFocus, on3DModeSelected, revealed = true, closeSignal = 0 }: LayerPanelProps) {
   const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
   /**
    * A pinned group stays open when the pointer leaves. Hover-only flyouts are
@@ -196,6 +199,10 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
    * far edge closes the thing you were reaching for.
    */
   const [pinnedGroup, setPinnedGroup] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (closeSignal > 0) { setPinnedGroup(null); setHoveredGroup(null); }
+  }, [closeSignal]);
 
   useEffect(() => {
     if (!pinnedGroup) return;
@@ -303,14 +310,14 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
       initial={{ y: 40, opacity: 0 }}
       animate={revealed ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }}
       transition={{ type: 'spring', damping: 30, stiffness: 200, delay: 0.25 }}
-      className="absolute bottom-3 left-3 flex flex-row flex-wrap max-w-[62vw] items-center px-3.5 py-2 z-[240] pointer-events-auto rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
+      className="absolute bottom-3 left-3 flex flex-row flex-wrap max-w-[86vw] items-center px-5 py-2 z-[240] pointer-events-auto rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
       style={{
         background: 'rgba(0,0,0,0.55)',
         backdropFilter: 'blur(24px) saturate(1.2)',
         WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
       }}
     >
-      <div className="flex flex-row flex-wrap justify-center items-center gap-3">
+      <div className="flex flex-row flex-wrap justify-center items-center gap-10">
         {visibleGroups.map((group) => {
           /* Sub-layers modify a parent rather than draw anything of their own,
              so they do not count towards the rail's reading. */
