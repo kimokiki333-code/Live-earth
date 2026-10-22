@@ -58,7 +58,7 @@ export async function GET(req: Request) {
       country_code: regionCode || '',
       calling_code: parsed.getCountryCode ? `+${parsed.getCountryCode()}` : undefined,
       line_type: typeMap[util.getNumberType(parsed)] || 'UNKNOWN',
-      ...(centroid ? { lat: centroid[0], lng: centroid[1] } : {}),
+      ...(centroid ? { lat: centroid[1], lng: centroid[0] } : {}),
     });
   } catch {
     return NextResponse.json({ error: 'Phone lookup failed' }, { status: 502 });

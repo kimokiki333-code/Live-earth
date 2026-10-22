@@ -15,6 +15,7 @@ export async function GET(req: Request) {
     });
     if (!res.ok) return NextResponse.json({ error: `crt.sh returned ${res.status}` }, { status: 502 });
     const rows = await res.json();
+    if (Array.isArray(rows)) rows.sort((a: any, b: any) => String(b.not_before).localeCompare(String(a.not_before)));
     const seen = new Set<string>();
     const certificates: any[] = [];
     for (const c of Array.isArray(rows) ? rows : []) {

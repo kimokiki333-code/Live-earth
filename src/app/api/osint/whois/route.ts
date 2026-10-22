@@ -43,7 +43,39 @@ export async function GET(req: Request) {
       if (res?.ok) { d = await res.json(); break; }
       lastStatus = res?.status || 0;
     }
-    if (!d) return NextResponse.json({ error: `Registry returned ${lastStatus || 'no answer'}` }, { status: 502 });
+    if (!d) {
+      // RDAP refused (some registries 403 datacentre clients): fall back to
+      // the classic plain-text WHOIS record and parse the labelled lines.
+      const ht = await fetch(`https://api.hackertarget.com/whois/?q=${encodeURIComponent(domain)}`, {
+        headers: { 'User-Agent': 'BADR-LIVE-EARTH/1.0' },
+        signal: AbortSignal.timeout(12000),
+      }).catch(() => null);
+      const text = ht?.ok ? await ht.text() : '';
+      if (!text || /error|invalid/i.test(text.slice(0, 60))) {
+        return NextResponse.json({ error: `Registry returned ${lastStatus || 'no answer'}` }, { status: 502 });
+      }
+      const grab = (labels: string[]) => {
+        for (const line of text.split('\n')) {
+          const idx = line.indexOf(':');
+          if (idx < 0) continue;
+          if (labels.includes(line.slice(0, idx).trim().toLowerCase())) return line.slice(idx + 1).trim();
+        }
+        return undefined;
+      };
+      const grabAll = (labels: string[]) => text.split('\n')
+        .filter(line => labels.includes(line.slice(0, line.indexOf(':')).trim().toLowerCase()))
+        .map(line => line.slice(line.indexOf(':') + 1).trim()).filter(Boolean);
+      return NextResponse.json({
+        domain_name: domain,
+        registrar: grab(['registrar', 'sponsoring registrar']),
+        creation_date: grab(['creation date', 'created', 'registration date']),
+        expiration_date: grab(['registry expiry date', 'expiry date', 'expiration date', 'registrar registration expiration date']),
+        updated_date: grab(['updated date', 'last modified']),
+        status: grabAll(['domain status', 'status']),
+        name_servers: grabAll(['name server', 'nameserver', 'nserver']),
+        timestamp: new Date().toISOString(),
+      }, { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200' } });
+    }
 
     let registrar: string | undefined;
     for (const e of d.entities || []) {

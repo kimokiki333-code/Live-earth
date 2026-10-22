@@ -20,12 +20,13 @@ export async function GET(req: Request) {
     let row = Array.isArray(rows) ? rows[0] : null;
     if (!row?.TLE_LINE1 || !row?.TLE_LINE2) {
       // Celestrak refused: find the TLE in SatNOGS' list instead.
-      const alt = await fetch('https://db.satnogs.org/api/tle/', {
+      const alt = await fetch(`https://db.satnogs.org/api/tle/?norad_cat_id=${encodeURIComponent(id)}`, {
         headers: { 'User-Agent': 'BADR-LIVE-EARTH/1.0', Accept: 'application/json' },
         signal: AbortSignal.timeout(30000),
       }).catch(() => null);
-      const list = alt?.ok ? await alt.json().catch(() => []) : [];
-      const hit = (Array.isArray(list) ? list : []).find((r: any) => Number(String(r.tle1 || '').substring(2, 7)) === Number(id));
+      const altData: any = alt?.ok ? await alt.json().catch(() => null) : null;
+      const list: any[] = Array.isArray(altData) ? altData : altData?.results || [];
+      const hit = list.find((r: any) => Number(String(r.tle1 || '').substring(2, 7)) === Number(id)) || list[0];
       if (hit) row = { OBJECT_NAME: String(hit.tle0 || '').replace(/^0\s+/, ''), TLE_LINE1: hit.tle1, TLE_LINE2: hit.tle2 };
     }
     if (!row?.TLE_LINE1 || !row?.TLE_LINE2) return NextResponse.json({ error: 'Satellite not in catalogue' }, { status: 404 });

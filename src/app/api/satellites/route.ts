@@ -53,19 +53,29 @@ function categoryForName(name: string): string {
 }
 
 async function fetchSatnogs(now: Date, push: (name: string, noradId: number, l1: string, l2: string, category: string) => void): Promise<void> {
-  const res = await fetch('https://db.satnogs.org/api/tle/', {
-    headers: { 'User-Agent': 'BADR-LIVE-EARTH/1.0', Accept: 'application/json' },
-    signal: AbortSignal.timeout(30000),
-  });
-  if (!res.ok) return;
-  const rows = await res.json();
-  for (const row of Array.isArray(rows) ? rows : []) {
+  // DRF-paginated: { count, next, results }. Walk pages until exhausted or
+  // the catalogue is big enough to draw a convincing sky.
+  let url: string | null = 'https://db.satnogs.org/api/tle/?page_size=100';
+  let pushed = 0;
+  for (let page = 0; page < 60 && url; page++) {
+    const res: globalThis.Response = await fetch(url, {
+      headers: { 'User-Agent': 'BADR-LIVE-EARTH/1.0', Accept: 'application/json' },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) return;
+    const data: any = await res.json();
+    const rows: any[] = Array.isArray(data) ? data : data.results || [];
+    for (const row of rows) {
     const l1 = String(row.tle1 || '');
     const l2 = String(row.tle2 || '');
     const noradId = Number(l1.substring(2, 7));
     if (!noradId || !l1 || !l2) continue;
     const name = String(row.tle0 || `NORAD ${noradId}`).replace(/^0\s+/, '').trim();
     push(name, noradId, l1, l2, categoryForName(name));
+    pushed++;
+    }
+    if (pushed >= 6000) return;
+    url = !Array.isArray(data) && data.next ? data.next : null;
   }
 }
 
