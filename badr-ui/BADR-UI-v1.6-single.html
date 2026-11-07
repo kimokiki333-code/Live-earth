@@ -1,0 +1,1256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05070c">
+<title>BADR LIVE EARTH — UI v1.5</title>
+<style>
+/* badr-ui.css v1.2 — inlined so this file is fully standalone */
+/* ============================================================
+   BADR LIVE EARTH — UI SYSTEM v1
+   One layout, reflows for phone and desktop. Nothing overlaps.
+   States: ON = neon green · OFF = dark+silver · ERR = yellow
+   Alerts = red, always on.
+   ============================================================ */
+
+:root{
+  --bg:#05070c;
+  --bg2:#080b12;
+  --panel:#0b0f18;
+  --panel2:#0e131e;
+  --line:rgba(255,255,255,.10);
+  --line2:rgba(255,255,255,.18);
+  --txt:#eef3fa;
+  --txt2:#b9c3d3;
+  --txt3:#788394;
+
+  --on:#39ff88;
+  --on-bg:rgba(57,255,136,.12);
+  --on-glow:0 0 0 1px rgba(57,255,136,.55), 0 0 18px rgba(57,255,136,.28);
+
+  --off:#aeb6c6;
+  --warn:#ffd400;
+  --warn-bg:rgba(255,212,0,.12);
+  --warn-glow:0 0 0 1px rgba(255,212,0,.5), 0 0 18px rgba(255,212,0,.18);
+
+  --alert:#ff2d55;
+  --alert-bg:rgba(255,45,85,.10);
+  --gold:#ffd700;
+  --cyan:#63e6ff;
+
+  --r:14px;
+  --r-sm:10px;
+  --h-btn:38px;
+  --hdr-h:56px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(1200px 700px at 50% -10%,#0d1424 0%,var(--bg) 60%) fixed;
+  color:var(--txt);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+svg{display:block}
+
+/* ── icon sizing ─────────────────────────────────────────── */
+.ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;
+    stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.ic.sm{width:16px;height:16px}
+.ic.lg{width:24px;height:24px}
+
+/* ════════════════════════════════════════════════════════
+   BADR ASSIST — floating AI chat (free tier)
+   ════════════════════════════════════════════════════════ */
+.ai{
+  position:fixed;z-index:90;display:none;flex-direction:column;
+  right:12px;bottom:calc(52px + var(--safe-b) + 12px);
+  width:min(384px,calc(100vw - 24px));
+  height:min(470px,calc(100vh - 130px));
+  background:linear-gradient(180deg,#0b111c,#070a11);
+  border:1px solid var(--line2);border-radius:16px;
+  box-shadow:0 30px 80px rgba(0,0,0,.72),0 0 0 1px rgba(99,230,255,.10);
+  overflow:hidden;
+  transform-origin:100% 100%;
+  animation:aiIn .18s cubic-bezier(.22,1,.36,1);
+}
+@keyframes aiIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+.ai.open{display:flex}
+
+.ai-h{display:flex;align-items:center;gap:8px;padding:9px 9px 9px 12px;
+      border-bottom:1px solid var(--line);flex:0 0 auto;background:rgba(8,11,18,.9)}
+.ai-h .t{font-size:.64rem;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold)}
+.ai-mark{color:var(--cyan)}
+.ai-st{
+  margin-left:auto;display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;
+  font-size:.54rem;font-weight:900;letter-spacing:.9px;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--txt3);
+}
+.ai-st .dot{width:6px;height:6px}
+.ai-st.on{color:var(--on);border-color:rgba(57,255,136,.45);background:rgba(57,255,136,.10)}
+.ai-st.on .dot{background:var(--on);box-shadow:0 0 8px var(--on)}
+.ai-st.err{color:var(--warn);border-color:rgba(255,212,0,.45);background:rgba(255,212,0,.10)}
+.ai-st.err .dot{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.ai-st.work{color:var(--cyan);border-color:rgba(99,230,255,.45);background:rgba(99,230,255,.10)}
+.ai-st.work .dot{background:var(--cyan);box-shadow:0 0 8px var(--cyan);animation:pulse 1s ease-in-out infinite}
+
+.ai-x{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto;
+      border:1px solid var(--line2);background:#0b0f18;color:var(--txt2)}
+.ai-x:hover{color:var(--txt);border-color:rgba(255,255,255,.3)}
+.ai-x.on{color:var(--gold);border-color:rgba(255,215,0,.55);background:rgba(255,215,0,.10)}
+
+.ai-cfg{padding:10px 12px;border-bottom:1px solid var(--line);background:#060a11;
+        display:flex;flex-direction:column;gap:8px;flex:0 0 auto}
+.ai-cfg[hidden]{display:none}
+.cfg-row{display:flex;align-items:center;gap:8px}
+.cfg-lbl{flex:0 0 58px;font-size:.54rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--txt3)}
+.cfg-row input{
+  flex:1;min-width:0;height:30px;padding:0 9px;border-radius:8px;
+  border:1px solid var(--line2);background:#05080e;color:var(--txt);font-size:.68rem;
+}
+.cfg-row input:focus,.cfg-row select:focus{outline:none;border-color:rgba(99,230,255,.55);box-shadow:0 0 0 3px rgba(99,230,255,.10)}
+.cfg-row select{
+  flex:1;min-width:0;height:30px;padding:0 8px;border-radius:8px;
+  border:1px solid var(--line2);background:#05080e;color:var(--txt);
+  font-size:.64rem;font-weight:700;letter-spacing:.2px;
+  appearance:none;-webkit-appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--txt3) 50%),linear-gradient(135deg,var(--txt3) 50%,transparent 50%);
+  background-position:calc(100% - 14px) 13px,calc(100% - 9px) 13px;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+.cfg-row input[type=password]{letter-spacing:1px}
+.go-sm{
+  flex:0 0 auto;height:30px;padding:0 10px;border-radius:8px;
+  border:1px solid rgba(57,255,136,.45);background:rgba(57,255,136,.12);color:var(--on);
+  font-size:.56rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;
+}
+.go-sm:hover{background:rgba(57,255,136,.22)}
+.cfg-row[hidden]{display:none}
+.seg{display:flex;gap:4px}
+.seg button{
+  height:28px;padding:0 10px;border-radius:7px;border:1px solid var(--line2);
+  background:#0a0e16;color:var(--txt3);font-size:.56rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;
+}
+.seg button.on{color:var(--on);border-color:rgba(57,255,136,.5);background:rgba(57,255,136,.12)}
+.cfg-note{font-size:.56rem;line-height:1.65;color:var(--txt3);white-space:pre-line}
+.cfg-note code{background:#0b0f18;border:1px solid var(--line2);border-radius:4px;padding:0 4px;color:var(--cyan)}
+.cfg-note.warn{color:var(--warn)}
+
+.ai-log{flex:1 1 auto;min-height:0;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.ai-msg{max-width:93%;padding:8px 10px;border-radius:11px;font-size:.73rem;line-height:1.65;
+        white-space:pre-wrap;overflow-wrap:anywhere}
+.ai-msg.bot{align-self:flex-start;background:#0d1420;border:1px solid var(--line2);color:var(--txt)}
+.ai-msg.me{align-self:flex-end;background:rgba(57,255,136,.13);border:1px solid rgba(57,255,136,.40);color:#dcffec}
+.ai-msg.sys{align-self:stretch;max-width:100%;background:#080c14;border:1px dashed var(--line2);color:var(--txt3);font-size:.65rem}
+.ai-msg.bad{align-self:stretch;max-width:100%;background:rgba(255,212,0,.09);border:1px solid rgba(255,212,0,.45);color:var(--warn);font-size:.65rem}
+.ai-msg.think{color:var(--cyan);font-style:italic}
+
+.ai-in{display:flex;gap:6px;padding:9px 10px;border-top:1px solid var(--line);flex:0 0 auto;background:#070b12}
+.ai-in input{
+  flex:1;min-width:0;height:36px;padding:0 11px;border-radius:10px;
+  border:1px solid var(--line2);background:#05080e;color:var(--txt);font-size:.76rem;
+}
+.ai-in input::placeholder{color:#5c6677}
+.ai-in input:focus{outline:none;border-color:rgba(99,230,255,.55);box-shadow:0 0 0 3px rgba(99,230,255,.10)}
+.ai-in .go{
+  width:36px;height:36px;flex:0 0 auto;border-radius:10px;display:grid;place-items:center;
+  border:1px solid rgba(57,255,136,.45);background:rgba(57,255,136,.12);color:var(--on);
+}
+.ai-in .go:hover{background:rgba(57,255,136,.22)}
+.ai-in .go[disabled]{opacity:.45;cursor:not-allowed}
+
+/* ══════════════════════════════════════════════════════════
+   SHELL
+   ══════════════════════════════════════════════════════════ */
+.app{
+  position:fixed;inset:0;
+  display:grid;
+  grid-template-columns:var(--rail-w,64px) minmax(0,1fr) var(--side-w,330px);
+  grid-template-rows:auto auto minmax(0,1fr) auto;
+  grid-template-areas:
+    "hdr hdr hdr"
+    "alert alert alert"
+    "rail map side"
+    "dock dock dock";
+}
+.app.side-closed{--side-w:0px}
+
+/* ── header: never overlaps, never clips ───────────────── */
+.hdr{
+  grid-area:hdr;position:relative;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto auto;
+  align-items:center;
+  gap:10px;
+  height:var(--hdr-h);
+  padding:0 12px 0 12px;
+  padding-top:var(--safe-t);
+  background:linear-gradient(180deg,rgba(8,11,18,.98),rgba(8,11,18,.86));
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(14px);
+  z-index:40;
+}
+.logo,.title-wrap{min-width:0}
+.title-wrap{min-width:0;overflow:hidden}
+.logo{
+  width:32px;height:32px;flex:0 0 auto;border-radius:10px;
+  display:grid;place-items:center;
+  background:linear-gradient(150deg,#0f1a2b,#0a0e16);
+  border:1px solid rgba(255,215,0,.42);
+  box-shadow:0 0 16px rgba(255,215,0,.12), inset 0 1px 0 rgba(255,255,255,.06);
+  color:var(--gold);
+}
+.title{
+  min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  font-size:.82rem;font-weight:800;letter-spacing:1.6px;
+  color:var(--txt);
+}
+.title b{color:var(--gold);font-weight:800}
+.sub{
+  display:block;font-size:.52rem;letter-spacing:1.4px;color:var(--txt3);
+  font-weight:700;margin-top:1px;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* the 4 map buttons — their own track, never squeezed, never overlapped */
+.maps{display:flex;gap:6px;flex:0 0 auto;align-items:center;justify-self:end}
+
+/* ── ALERT PILL — lives in the header's own last column.
+      It is NOT inside .maps, so no map button can ever cover it,
+      and no map button can ever be covered by it. ───────────── */
+.alertpill{
+  grid-column:4;justify-self:end;flex:0 0 auto;
+  height:34px;padding:0 10px;gap:7px;border-radius:10px;
+  font-size:.62rem;font-weight:900;letter-spacing:1.3px;
+  color:#fff;
+  background:linear-gradient(180deg,rgba(255,45,85,.42),rgba(255,45,85,.20));
+  border:1px solid rgba(255,45,85,.85);
+  box-shadow:0 0 0 1px rgba(255,45,85,.25),0 0 18px rgba(255,45,85,.30);
+  animation:alertPulse 2.6s ease-in-out infinite;
+}
+.alertpill:hover{background:linear-gradient(180deg,rgba(255,45,85,.58),rgba(255,45,85,.30))}
+.alertpill .ap-t{color:#fff;letter-spacing:1.5px}
+/* hard guards: the pill may never be clipped, shrunk or stacked under anything */
+.hdr{overflow:visible}
+.hdr > .alertpill{position:relative;z-index:6}
+.hdr > .maps{position:relative;z-index:5}
+.alertpill .count{background:rgba(255,255,255,.22);color:#fff}
+@keyframes alertPulse{
+  0%,100%{box-shadow:0 0 0 1px rgba(255,45,85,.25),0 0 18px rgba(255,45,85,.28)}
+  50%    {box-shadow:0 0 0 1px rgba(255,45,85,.45),0 0 26px rgba(255,45,85,.48)}
+}
+@media (max-width:1180px){ .alertpill .ap-t{display:none} }
+
+/* ── buttons ───────────────────────────────────────────── */
+.btn{
+  position:relative;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  height:var(--h-btn);min-width:var(--h-btn);padding:0 12px;
+  border-radius:var(--r-sm);
+  border:1px solid var(--line2);
+  background:linear-gradient(180deg,#111826,#0b0f18);
+  color:var(--txt);
+  font-size:.7rem;font-weight:800;letter-spacing:.9px;text-transform:uppercase;
+  white-space:nowrap;
+  transition:border-color .16s,color .16s,box-shadow .16s,background .16s,transform .08s;
+}
+.btn:hover{border-color:rgba(255,255,255,.30);background:linear-gradient(180deg,#16202f,#0d1220)}
+.btn:active{transform:translateY(1px)}
+.btn.icon{padding:0;width:var(--h-btn)}
+.btn.icon .lbl-txt{display:none}
+.btn.locked{cursor:default}
+
+/* ON — neon green */
+.btn.on{
+  color:var(--on);border-color:rgba(57,255,136,.55);
+  background:linear-gradient(180deg,rgba(57,255,136,.16),rgba(57,255,136,.06));
+  box-shadow:var(--on-glow);
+}
+/* OFF — dark, silver */
+.btn.off{color:var(--off);border-color:var(--line);background:linear-gradient(180deg,#0b1019,#080c14)}
+.btn.off:hover{color:var(--txt2)}
+/* ERROR / DOWN / UNDER CONSTRUCTION — yellow on dark */
+.btn.err{
+  color:var(--warn);border-color:rgba(255,212,0,.5);
+  background:linear-gradient(180deg,rgba(255,212,0,.10),rgba(255,212,0,.03));
+  box-shadow:var(--warn-glow);
+}
+/* ALERT — red, always visible */
+.btn.alert{
+  color:#fff;border-color:rgba(255,45,85,.75);
+  background:linear-gradient(180deg,rgba(255,45,85,.34),rgba(255,45,85,.16));
+  box-shadow:0 0 0 1px rgba(255,45,85,.35),0 0 22px rgba(255,45,85,.22);
+}
+.btn.alert .dot{background:var(--alert);box-shadow:0 0 10px var(--alert)}
+
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.dot.live{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.72)}}
+
+.count{
+  min-width:18px;height:16px;padding:0 5px;border-radius:5px;
+  display:inline-grid;place-items:center;
+  font-size:.6rem;font-weight:900;letter-spacing:0;
+  background:rgba(255,255,255,.10);color:var(--txt);
+}
+.btn.on .count{background:rgba(57,255,136,.22);color:var(--on)}
+.btn.err .count{background:rgba(255,212,0,.20);color:var(--warn)}
+
+/* ── alert bar: always on, wide, dark red ──────────────── */
+.alertbar{
+  grid-area:alert;
+  display:flex;align-items:center;gap:9px;
+  height:30px;padding:0 12px;
+  background:linear-gradient(90deg,rgba(255,45,85,.16),rgba(255,45,85,.06) 55%,rgba(255,45,85,.12));
+  border-bottom:1px solid rgba(255,45,85,.30);
+  color:#ffd9e2;font-size:.66rem;font-weight:700;letter-spacing:.5px;
+  overflow:hidden;white-space:nowrap;z-index:30;
+}
+.alertbar .lbl{
+  display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
+  color:var(--alert);font-weight:900;letter-spacing:1.4px;font-size:.6rem;text-transform:uppercase;
+}
+.alertbar .txt{overflow:hidden;text-overflow:ellipsis;color:#ffc9d6;min-width:0}
+.alertbar .more{margin-left:auto;flex:0 0 auto;color:#ff9db2;font-size:.6rem;font-weight:800}
+
+/* ══════════════════════════════════════════════════════════
+   LEFT RAIL
+   ══════════════════════════════════════════════════════════ */
+.rail{
+  grid-area:rail;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:8px 0;
+  background:rgba(6,9,15,.9);
+  border-right:1px solid var(--line);
+  overflow-y:auto;overflow-x:hidden;
+  scrollbar-width:none;
+  z-index:20;
+}
+.rail::-webkit-scrollbar{display:none}
+.rail .sep{width:26px;height:1px;background:var(--line);margin:5px 0;flex:0 0 auto}
+
+.rbtn{
+  position:relative;
+  width:44px;height:42px;border-radius:11px;
+  display:grid;place-items:center;
+  color:var(--off);
+  border:1px solid transparent;
+  background:transparent;
+  transition:.15s;
+  flex:0 0 auto;
+}
+.rbtn:hover{background:rgba(255,255,255,.06);color:var(--txt)}
+.rbtn .ic{width:21px;height:21px}
+.rbtn.on{
+  color:var(--on);background:var(--on-bg);
+  border-color:rgba(57,255,136,.42);
+  box-shadow:inset 3px 0 0 var(--on);
+}
+.rbtn.err{color:var(--warn);background:var(--warn-bg);border-color:rgba(255,212,0,.38)}
+.rbtn .tip{
+  position:absolute;left:52px;top:50%;transform:translateY(-50%) translateX(-4px);
+  background:#111826;border:1px solid var(--line2);color:var(--txt);
+  padding:5px 9px;border-radius:8px;font-size:.62rem;font-weight:700;letter-spacing:.6px;
+  white-space:nowrap;opacity:0;pointer-events:none;transition:.14s;z-index:60;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);
+}
+.rbtn:hover .tip{opacity:1;transform:translateY(-50%) translateX(0)}
+.rail .grow{flex:1 1 auto;min-height:6px}
+
+/* ══════════════════════════════════════════════════════════
+   MAP STAGE
+   ══════════════════════════════════════════════════════════ */
+.stage{
+  grid-area:map;position:relative;min-width:0;min-height:0;
+  background:
+    radial-gradient(900px 520px at 30% 20%,rgba(24,40,70,.55),transparent 70%),
+    radial-gradient(700px 460px at 80% 75%,rgba(60,20,50,.35),transparent 70%),
+    #04060b;
+  overflow:hidden;
+}
+.grid-lines{
+  position:absolute;inset:0;opacity:.16;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(99,230,255,.35) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(99,230,255,.35) 1px,transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(circle at 50% 50%,#000 30%,transparent 78%);
+}
+/* 2D flat plane — a rectangle of graticule, never a sphere */
+.plane-ghost{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(78vh,680px);max-width:86%;aspect-ratio:2/1;border-radius:14px;
+  border:1px solid rgba(99,230,255,.16);
+  background-image:
+    linear-gradient(rgba(99,230,255,.10) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(99,230,255,.10) 1px,transparent 1px);
+  background-size:100% 25%,12.5% 100%;
+  box-shadow:inset 0 0 90px rgba(99,230,255,.05);
+  pointer-events:none;
+}
+.plane-ghost::after{
+  content:"";position:absolute;left:0;right:0;top:50%;height:1px;
+  background:rgba(255,215,0,.38);box-shadow:0 0 12px rgba(255,215,0,.25);
+}
+.stage .stamp{
+  position:absolute;left:14px;bottom:14px;
+  font-size:.58rem;letter-spacing:1.6px;color:var(--txt3);font-weight:800;text-transform:uppercase;
+}
+/* master switches — top-LEFT of the map.
+   the top-right corner is left empty on purpose: that is where the
+   alert pill and the 4 map buttons meet, and nothing else may sit there. */
+.mapctl{
+  position:absolute;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap;
+  justify-content:flex-start;max-width:calc(100% - 24px);
+}
+
+/* ══════════════════════════════════════════════════════════
+   RIGHT SIDE — OSINT TOOLKIT
+   ══════════════════════════════════════════════════════════ */
+.side{
+  grid-area:side;min-width:0;
+  display:flex;flex-direction:column;gap:0;
+  background:rgba(7,10,17,.96);
+  border-left:1px solid var(--line);
+  overflow:hidden;z-index:20;
+}
+.app.side-closed .side{display:none}
+.app.side-open .side{display:flex}
+
+.side-h{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 12px;border-bottom:1px solid var(--line);
+  flex:0 0 auto;
+}
+.side-h .t{font-size:.64rem;font-weight:900;letter-spacing:1.8px;text-transform:uppercase;color:var(--gold)}
+.side-h .n{margin-left:auto;font-size:.58rem;color:var(--txt3);font-weight:700;letter-spacing:1px}
+.side-b{overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:10px}
+
+.card{
+  border:1px solid var(--line);border-radius:var(--r);
+  background:linear-gradient(180deg,var(--panel),var(--panel2));
+  padding:11px;
+}
+.card-h{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.card-h .ic{color:var(--cyan);width:17px;height:17px}
+.card-h .t{font-size:.66rem;font-weight:900;letter-spacing:1.3px;text-transform:uppercase;color:var(--txt)}
+.card-h .s{margin-left:auto;font-size:.56rem;color:var(--txt3);font-weight:700;letter-spacing:.8px}
+
+.field{display:flex;gap:6px}
+.field input{
+  flex:1;min-width:0;height:34px;padding:0 10px;
+  border-radius:9px;border:1px solid var(--line2);
+  background:#05080e;color:var(--txt);
+  font-size:.74rem;letter-spacing:.2px;
+}
+.field input::placeholder{color:#5c6677}
+.field input:focus{outline:none;border-color:rgba(99,230,255,.55);box-shadow:0 0 0 3px rgba(99,230,255,.10)}
+.field .go{
+  height:34px;padding:0 12px;border-radius:9px;
+  border:1px solid rgba(57,255,136,.45);
+  background:rgba(57,255,136,.12);color:var(--on);
+  font-size:.64rem;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.field .go:hover{background:rgba(57,255,136,.2)}
+
+.tabs{display:flex;gap:5px;margin-bottom:9px;flex-wrap:wrap}
+.tab{
+  height:26px;padding:0 9px;border-radius:7px;
+  border:1px solid var(--line);background:#0a0e16;color:var(--txt3);
+  font-size:.58rem;font-weight:900;letter-spacing:1.1px;text-transform:uppercase;
+}
+.tab.on{color:var(--gold);border-color:rgba(255,215,0,.45);background:rgba(255,215,0,.10)}
+
+.res{display:flex;flex-direction:column;gap:5px;margin-top:9px}
+.res-i{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 9px;border-radius:9px;
+  background:#070b12;border:1px solid var(--line);
+  font-size:.7rem;color:var(--txt2);
+}
+.res-i b{color:var(--txt);font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.res-i .st{margin-left:auto;font-size:.56rem;font-weight:900;letter-spacing:1px;padding:2px 6px;border-radius:5px}
+.res-i .st.found{color:var(--on);background:rgba(57,255,136,.12)}
+.res-i .st.none{color:var(--txt3);background:rgba(255,255,255,.05)}
+.res-i .st.warn{color:var(--warn);background:rgba(255,212,0,.12)}
+
+/* ══════════════════════════════════════════════════════════
+   BOTTOM DOCK  (3 free slots + status)
+   ══════════════════════════════════════════════════════════ */
+.dock{
+  grid-area:dock;
+  display:flex;align-items:center;gap:8px;
+  height:calc(52px + var(--safe-b));
+  padding:0 10px var(--safe-b);
+  background:linear-gradient(0deg,rgba(7,10,17,.99),rgba(7,10,17,.9));
+  border-top:1px solid var(--line);
+  z-index:30;overflow-x:auto;scrollbar-width:none;
+}
+.dock::-webkit-scrollbar{display:none}
+.dock-scroll{
+  display:flex;align-items:center;gap:8px;
+  flex:1 1 auto;min-width:0;
+  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+}
+.dock-scroll::-webkit-scrollbar{display:none}
+.dock-pin{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.slot.free{border-style:dashed}
+.slot.free:hover{border-color:rgba(255,215,0,.55);color:var(--gold);background:rgba(255,215,0,.06)}
+.ai-trigger{border-color:rgba(99,230,255,.42);color:var(--cyan);background:linear-gradient(180deg,rgba(99,230,255,.14),rgba(99,230,255,.04))}
+.ai-trigger:hover{border-color:rgba(99,230,255,.7);box-shadow:0 0 18px rgba(99,230,255,.22)}
+.ai-trigger.on{border-color:rgba(99,230,255,.8);box-shadow:0 0 0 1px rgba(99,230,255,.35),0 0 20px rgba(99,230,255,.3)}
+.dock .slot{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;
+  height:34px;padding:0 12px;border-radius:10px;
+  border:1px dashed rgba(255,255,255,.16);
+  color:var(--txt3);font-size:.62rem;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;
+  background:rgba(255,255,255,.02);
+}
+.dock .slot.used{border-style:solid;color:var(--txt2);border-color:var(--line2)}
+.dock .grow{flex:1 1 auto;min-width:8px}
+.dock .clock{
+  flex:0 0 auto;font-variant-numeric:tabular-nums;
+  font-size:.64rem;font-weight:800;letter-spacing:1.2px;color:var(--txt2);
+  padding:0 4px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   MOBILE  ≤ 820px
+   header becomes 2 rows → the 4 map buttons get their own
+   full-width row, so the title can never cover them.
+   ══════════════════════════════════════════════════════════ */
+.mobile-only{display:none}
+
+@media (max-width:820px){
+  .app{
+    --rail-w:0px;--side-w:0px;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto auto minmax(0,1fr) auto auto;
+    grid-template-areas:
+      "hdr"
+      "alert"
+      "map"
+      "rail"
+      "dock";
+  }
+  .hdr{
+    height:auto;
+    padding:calc(8px + var(--safe-t)) 10px 8px;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    row-gap:8px;
+  }
+  .alertpill{grid-area:alerts;height:32px;padding:0 9px}
+  .logo{grid-area:logo}
+  .title-wrap{grid-area:title}
+  .title-wrap .sub{display:none}
+  .title{font-size:.76rem;letter-spacing:1.2px}
+  .maps{
+    grid-area:maps;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+    width:100%;
+  }
+  .hdr{grid-template-areas:"logo title alerts" "maps maps maps"}
+  .maps .btn{width:100%;justify-content:center}
+  .maps .btn .lbl-txt{display:inline}
+
+  /* master switches: one compact row, never a second row over the map */
+  .mapctl{
+    left:8px;right:8px;top:8px;gap:5px;max-width:none;
+    flex-wrap:nowrap;justify-content:flex-start;
+    overflow-x:auto;scrollbar-width:none;
+  }
+  .mapctl::-webkit-scrollbar{display:none}
+  .mapctl .btn{height:31px;padding:0 8px;font-size:.55rem;letter-spacing:.5px;gap:5px;flex:0 0 auto}
+  .mapctl .btn .ic.sm{width:13px;height:13px}
+  .mapctl .btn .count{height:14px;min-width:16px;font-size:.55rem}
+
+  /* left rail turns into a horizontal strip under the map */
+  .rail{
+    flex-direction:row;align-items:center;
+    gap:5px;padding:6px 8px;
+    border-right:0;border-top:1px solid var(--line);
+    overflow-x:auto;overflow-y:hidden;
+  }
+  .rail{scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  .rail .sep{width:1px;height:24px;margin:0 3px;flex:0 0 auto}
+  .rbtn{width:38px;height:36px;scroll-snap-align:start}
+  .rbtn .ic{width:19px;height:19px}
+  .rbtn .tip{display:none}
+  .rail .grow{display:none}
+
+  /* side panel becomes a slide-over sheet */
+  .side{
+    position:fixed;inset:auto 0 0 0;top:0;
+    max-width:none;width:min(92vw,380px);margin-left:auto;
+    transform:translateX(103%);visibility:hidden;
+    transition:transform .26s cubic-bezier(.22,1,.36,1),visibility .26s;
+    z-index:80;border-left:1px solid var(--line2);
+    box-shadow:-30px 0 60px rgba(0,0,0,.6);
+  }
+  .app.side-open .side{transform:none;visibility:visible}
+
+  .stage .stamp{
+    font-size:.48rem;letter-spacing:.8px;left:10px;bottom:10px;
+    white-space:nowrap;max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis;
+  }
+  .plane-ghost{max-width:92%}
+
+  /* assist becomes a bottom sheet */
+  .ai{
+    right:0;left:0;bottom:0;width:auto;
+    height:min(74vh,560px);
+    border-radius:16px 16px 0 0;border-bottom:0;
+    transform-origin:50% 100%;
+    animation:aiSheet .22s cubic-bezier(.22,1,.36,1);
+  }
+  @keyframes aiSheet{from{transform:translateY(100%)}to{transform:none}}
+
+  /* dock: labels drop, icons only -> everything fits, nothing is clipped */
+  .dock{height:calc(50px + var(--safe-b));gap:6px;padding:0 8px var(--safe-b)}
+  .slot-t{display:none}
+  .dock .slot{height:34px;width:38px;padding:0;justify-content:center;gap:0}
+  .dock-pin{gap:6px}
+  .dock-pin .clock{font-size:.55rem;letter-spacing:.5px;padding:0}
+  .app.side-closed .side{display:flex;transform:translateX(103%);visibility:hidden}
+  .sheet-x{display:grid}
+  .mobile-only{display:inline-flex}
+  .dock{height:calc(50px + var(--safe-b))}
+}
+@media (min-width:821px){
+  .app.side-closed .side{display:none}
+  .sheet-x{display:none}
+}
+
+/* scrim for the mobile sheet */
+.scrim{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);
+  opacity:0;pointer-events:none;transition:.2s;z-index:70;
+}
+.app.side-open ~ .scrim,.scrim.on{opacity:1;pointer-events:auto}
+
+.sheet-x{
+  width:30px;height:30px;border-radius:8px;place-items:center;
+  border:1px solid var(--line2);color:var(--txt2);background:#0b0f18;
+  margin-left:auto;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     ICON SPRITE — all new, drawn for this shell
+     ══════════════════════════════════════════════════════════ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-logo" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/>
+      <path d="M3.4 9h17.2M3.4 15h17.2"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5 2.8 20h18.4L12 3.5Z"/><path d="M12 9.5v4.5"/><circle cx="12" cy="17.2" r=".9" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-flat" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 12h19M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-sat" viewBox="0 0 24 24"><rect x="9.2" y="9.2" width="5.6" height="5.6" rx="1" transform="rotate(45 12 12)"/><path d="m7 7-3-3M17 17l3 3M6.4 10.8 3.5 13.7M13.2 17.6l-2.9 2.9"/><path d="M9.5 4.2 4.2 9.5M14.5 19.8l5.3-5.3"/></symbol>
+    <symbol id="i-plane" viewBox="0 0 24 24"><path d="M10.2 3.6c.5-1 2-1 2.5 0l1.1 6.1 6.4 3.5v2.2l-6.4-1.8-.9 4 2.4 1.9V21l-3.6-1.2L7.7 21v-1.5l2.4-1.9-.9-4L2.8 15.4v-2.2l6.4-3.5 1-6.1Z"/></symbol>
+    <symbol id="i-ship" viewBox="0 0 24 24"><path d="M4 16.5h16l-2 3.2H6l-2-3.2Z"/><path d="M6.2 16.5V11h11.6v5.5"/><path d="M12 11V5.5M9 8h6"/></symbol>
+    <symbol id="i-balloon" viewBox="0 0 24 24"><path d="M12 3a5.6 5.6 0 0 1 5.6 5.6c0 3.9-3.1 6.2-5.6 6.9-2.5-.7-5.6-3-5.6-6.9A5.6 5.6 0 0 1 12 3Z"/><path d="M12 15.5V21"/><path d="m10.4 17.6 1.6 1.3 1.6-1.3"/></symbol>
+    <symbol id="i-cctv" viewBox="0 0 24 24"><path d="m3 9.2 11.6-3.4 1.8 6.1L4.8 15.3 3 9.2Z"/><path d="M4.8 15.3 4 18.6h4.4l.8-2.7"/><path d="M9.2 13.1 7.4 7"/><circle cx="17.8" cy="14.6" r="2.4"/></symbol>
+    <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 21c3.4 0 6-2.4 6-5.6 0-4.4-4.3-6.3-4-11.4-2.9 1.3-4.6 4-4.6 6.3 0 1.3.5 2.2 1.2 2.9-1.5-.2-2.5-1-3.1-2.2-.9 1.3-1.5 2.8-1.5 4.4C6 18.6 8.6 21 12 21Z"/></symbol>
+    <symbol id="i-quake" viewBox="0 0 24 24"><path d="M2 13h3.2l1.8-6 2.6 12 2.6-9 2 6 1.6-3H22"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.5 1.4A3.3 3.3 0 0 0 7 18.5Z"/></symbol>
+    <symbol id="i-rad" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.1"/><path d="M12 9.9V3.4a8.6 8.6 0 0 1 4.3 1.2l-3.2 5.5"/><path d="M10 12.5 4.4 16a8.6 8.6 0 0 1-.3-8.6l5.5 3.2"/><path d="m14 12.5 5.6 3.5a8.6 8.6 0 0 1-7.4 4.3l-2.6-5.5"/></symbol>
+    <symbol id="i-tower" viewBox="0 0 24 24"><path d="M12 21V9"/><path d="m12 9-3.4-5M12 9l3.4-5"/><path d="M8 21h8"/><path d="M6 6.5a7 7 0 0 1 12 0"/></symbol>
+    <symbol id="i-cable" viewBox="0 0 24 24"><path d="M2 8c4 0 4 8 8 8s4-8 8-8 4 8 4 8"/><circle cx="2" cy="8" r="1.4" fill="currentColor" stroke="none"/><circle cx="22" cy="16" r="1.4" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-bug" viewBox="0 0 24 24"><rect x="8" y="8" width="8" height="12" rx="4"/><path d="M8 12H4M16 12h4M8.5 8.5 5 6M15.5 8.5 19 6M8.5 17 5.5 19.5M15.5 17l3 2.5"/><path d="M9.5 8V6.5a2.5 2.5 0 0 1 5 0V8"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6l-7-3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20.5c.8-3.8 3.8-6 7.5-6s6.7 2.2 7.5 6"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.4"/><path d="m3.8 7.2 8.2 6 8.2-6"/></symbol>
+    <symbol id="i-at" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a2.6 2.6 0 0 0 5 1V12a9 9 0 1 0-3.6 7.2"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.6" width="10" height="18.8" rx="2.6"/><path d="M10.6 5.2h2.8"/><circle cx="12" cy="18.2" r=".9" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s6.4-6.1 6.4-10.6A6.4 6.4 0 0 0 5.6 10.4C5.6 14.9 12 21 12 21Z"/><circle cx="12" cy="10.3" r="2.4"/></symbol>
+    <symbol id="i-cross" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/><path d="M12 1.8v3.6M12 18.6v3.6M1.8 12h3.6M18.6 12h3.6"/></symbol>
+    <symbol id="i-radar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="4.4"/><path d="M12 12 18 6"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="m4 16.6 9.6-9.6 3.4 3.4-9.6 9.6L4 20l.1-3.4Z"/><path d="m13.6 7 2.2-2.2a1.6 1.6 0 0 1 2.3 0l1.1 1.1a1.6 1.6 0 0 1 0 2.3L17 10.4"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="5.5" cy="5.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/><path d="M8 5.5h5.4a3.4 3.4 0 0 1 0 6.8H9.9a3.4 3.4 0 0 0 0 6.8H16"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 14.4a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.4a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H3.4a2 2 0 1 1 0-4h.2a1.6 1.6 0 0 0 1.1-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-1.1V3.4a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.4a2 2 0 1 1 0 4h-.2a1.6 1.6 0 0 0-1.4 1.1Z"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5.5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="18.5" r="2.6"/><path d="m8.3 10.7 7.4-3.9M8.3 13.3l7.4 3.9"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-6.4 10-6.4S22 12 22 12s-3.6 6.4-10 6.4S2 12 2 12Z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M3.5 7h17M3.5 12h17M3.5 17h17"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3.2l1.85 5.05L19 10.1l-5.15 1.85L12 17l-1.85-5.05L5 10.1l5.15-1.85Z"/><path d="M18.5 16.2l.85 2.3 2.3.85-2.3.85-.85 2.3-.85-2.3-2.3-.85 2.3-.85Z"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10.6 13.4"/><path d="M21 3l-6.4 18-4-9-9-4Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="3.6"/><path d="M10.2 12.8 19 4M16.4 6.6l2.4 2.4M14 9l2.4 2.4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3.5v11"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4.5 19.5h15"/></symbol>
+    <symbol id="i-sat-on" viewBox="0 0 24 24"><path d="M6 4.5 4.5 6l2.4 2.4L5.4 10 3 7.6 4.5 6 6 4.5Z"/><path d="m14.5 5.5 4 4"/><path d="M11 9 9 11l4 4 2-2"/><circle cx="15.5" cy="15.5" r="4"/><path d="m18.3 18.3 2.2 2.2"/></symbol>
+  </defs>
+</svg>
+
+<div class="app" id="app">
+
+  <!-- ── HEADER ─────────────────────────────────────────── -->
+  <header class="hdr">
+    <a class="logo" href="#" aria-label="Badr">
+      <svg class="ic lg"><use href="#i-logo"/></svg>
+    </a>
+    <div class="title-wrap">
+      <div class="title">BADR <b>LIVE EARTH</b></div>
+      <span class="sub">GLOBAL INTELLIGENCE · v5</span>
+    </div>
+    <div class="maps" role="group" aria-label="Map view">
+      <button class="btn icon on locked" id="btn2d" title="2D flat map — locked, no 3D" aria-pressed="true"><svg class="ic"><use href="#i-flat"/></svg><span class="lbl-txt">2D</span></button>
+      <button class="btn icon on" id="btnLayers" title="Layers" aria-pressed="true"><svg class="ic"><use href="#i-layers"/></svg></button>
+      <button class="btn icon off" id="btnSearch" title="Search" aria-pressed="false"><svg class="ic"><use href="#i-search"/></svg></button>
+      <button class="btn icon off" id="btnFull" title="Full screen" aria-pressed="false"><svg class="ic"><use href="#i-expand"/></svg></button>
+    </div>
+    <button class="btn alert alertpill" id="btnAlerts" title="Alerts — always on, cannot be turned off"><svg class="ic sm"><use href="#i-alert"/></svg><span class="ap-t">Alerts</span><span class="count">12</span></button>
+  </header>
+
+  <!-- ── ALERT STRIP (always on) ─────────────────────────── -->
+  <div class="alertbar">
+    <span class="lbl"><svg class="ic sm"><use href="#i-alert"/></svg>Live</span>
+    <span class="txt">4 new seismic events · 1 aviation alert · 2 cyber incidents · radiation nominal</span>
+    <span class="more">VIEW</span>
+  </div>
+
+  <!-- ── LEFT RAIL ───────────────────────────────────────── -->
+  <nav class="rail" id="rail">
+    <button class="rbtn on" data-on="1"><svg class="ic"><use href="#i-sat"/></svg><span class="tip">Satellites</span></button>
+    <button class="rbtn" data-on="0"><svg class="ic"><use href="#i-plane"/></svg><span class="tip">Aircraft</span></button>
+    <button class="rbtn" data-on="0"><svg class="ic"><use href="#i-ship"/></svg><span class="tip">Maritime</span></button>
+    <button class="rbtn" data-on="0"><svg class="ic"><use href="#i-balloon"/></svg><span class="tip">Balloons</span></button>
+    <div class="sep"></div>
+    <button class="rbtn on" data-on="1"><svg class="ic"><use href="#i-cctv"/></svg><span class="tip">CCTV</span></button>
+    <button class="rbtn" data-on="0"><svg class="ic"><use href="#i-fire"/></svg><span class="tip">Fires</span></button>
+    <button class="rbtn on" data-on="1"><svg class="ic"><use href="#i-quake"/></svg><span class="tip">Seismic</span></button>
+    <button class="rbtn err" data-on="err"><svg class="ic"><use href="#i-rad"/></svg><span class="tip">Radiation · source down</span></button>
+    <div class="sep"></div>
+    <button class="rbtn" data-on="0"><svg class="ic"><use href="#i-tower"/></svg><span class="tip">Infrastructure</span></button>
+    <button class="rbtn on" data-on="1"><svg class="ic"><use href="#i-cable"/></svg><span class="tip">Submarine cables</span></button>
+    <button class="rbtn" data-on="0"><svg class="ic"><use href="#i-bug"/></svg><span class="tip">Malware</span></button>
+    <button class="rbtn on" data-on="1"><svg class="ic"><use href="#i-shield"/></svg><span class="tip">Cyber</span></button>
+    <div class="sep"></div>
+    <button class="rbtn" data-on="0"><svg class="ic"><use href="#i-pen"/></svg><span class="tip">Draw</span></button>
+    <button class="rbtn" data-on="0"><svg class="ic"><use href="#i-route"/></svg><span class="tip">Route</span></button>
+    <div class="grow"></div>
+    <button class="rbtn"><svg class="ic"><use href="#i-settings"/></svg><span class="tip">Settings</span></button>
+  </nav>
+
+  <!-- ── MAP ─────────────────────────────────────────────── -->
+  <main class="stage">
+    <div class="grid-lines"></div>
+    <div class="plane-ghost"></div>
+    <div class="mapctl">
+      <button class="btn on" id="masterSat"><svg class="ic sm"><use href="#i-sat"/></svg> All sats <span class="count" id="satCount">8/8</span></button>
+      <button class="btn off" id="masterAir"><svg class="ic sm"><use href="#i-plane"/></svg> All planes</button>
+      <button class="btn err" id="masterRad"><svg class="ic sm"><use href="#i-rad"/></svg> Radiation <span class="count">!</span></button>
+    </div>
+    <div class="stamp">2D flat · equirectangular · 62.4°N 14.2°E · zoom 4</div>
+  </main>
+
+  <!-- ── RIGHT: OSINT TOOLKIT ────────────────────────────── -->
+  <aside class="side" id="side">
+    <div class="side-h">
+      <svg class="ic sm" style="color:var(--gold)"><use href="#i-radar"/></svg>
+      <span class="t">OSINT Toolkit</span>
+      <span class="n">5 ENGINES</span>
+      <button class="sheet-x" id="sideClose"><svg class="ic sm"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="side-b">
+
+      <div class="card">
+        <div class="card-h"><svg class="ic"><use href="#i-user"/></svg><span class="t">Username</span><span class="s">40+ SITES</span></div>
+        <div class="tabs">
+          <button class="tab on">All</button><button class="tab">Social</button><button class="tab">Dev</button><button class="tab">Adult</button>
+        </div>
+        <form class="field">
+          <input placeholder="username" value="badr">
+          <button class="go"><svg class="ic sm"><use href="#i-search"/></svg>Run</button>
+        </form>
+        <div class="res">
+          <div class="res-i"><b>github.com/badr</b><span class="st found">FOUND</span></div>
+          <div class="res-i"><b>x.com/badr</b><span class="st found">FOUND</span></div>
+          <div class="res-i"><b>reddit.com/u/badr</b><span class="st none">NONE</span></div>
+          <div class="res-i"><b>keybase.io/badr</b><span class="st warn">CHECK</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><svg class="ic"><use href="#i-mail"/></svg><span class="t">Email</span><span class="s">BREACH + MX</span></div>
+        <form class="field">
+          <input placeholder="name@domain.com">
+          <button class="go"><svg class="ic sm"><use href="#i-search"/></svg>Run</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><svg class="ic"><use href="#i-at"/></svg><span class="t">Domain</span><span class="s">DNS · WHOIS</span></div>
+        <form class="field">
+          <input placeholder="example.com">
+          <button class="go"><svg class="ic sm"><use href="#i-search"/></svg>Run</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><svg class="ic"><use href="#i-pin"/></svg><span class="t">IP / Geo</span><span class="s">ASN · REP</span></div>
+        <form class="field">
+          <input placeholder="1.1.1.1">
+          <button class="go"><svg class="ic sm"><use href="#i-search"/></svg>Run</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><svg class="ic"><use href="#i-phone"/></svg><span class="t">Phone</span><span class="s">CARRIER</span></div>
+        <form class="field">
+          <input placeholder="+20 ...">
+          <button class="go"><svg class="ic sm"><use href="#i-search"/></svg>Run</button>
+        </form>
+      </div>
+
+    </div>
+  </aside>
+
+
+  <!-- ── SCRIM (mobile sheet + assist) ───────────────────── -->
+  <div class="scrim" id="scrim"></div>
+
+  <!-- ── BADR ASSIST — free Cloudflare models, many providers ── -->
+  <section class="ai" id="ai" aria-hidden="true" aria-label="Badr Assist">
+    <header class="ai-h">
+      <svg class="ic sm ai-mark"><use href="#i-spark"/></svg>
+      <span class="t">Badr Assist</span>
+      <span class="ai-st" id="aiState" title="connection state"><i class="dot"></i><span id="aiStateTxt">not connected</span></span>
+      <button class="ai-x" id="btnAiCfg" title="Connection settings" aria-label="Connection settings"><svg class="ic sm"><use href="#i-key"/></svg></button>
+      <button class="ai-x" id="btnAiClose" title="Close" aria-label="Close"><svg class="ic sm"><use href="#i-close"/></svg></button>
+    </header>
+
+    <div class="ai-cfg" id="aiCfg" hidden>
+      <label class="cfg-row"><span class="cfg-lbl">Model</span>
+        <select id="aiModel"></select>
+      </label>
+
+      <label class="cfg-row"><span class="cfg-lbl">Endpt</span>
+        <input id="aiEndpoint" spellcheck="false" autocomplete="off"
+               placeholder="https://your-worker.workers.dev"></label>
+
+      <div class="cfg-row">
+        <span class="cfg-lbl">Key</span>
+        <input id="aiKey" type="password" spellcheck="false" autocomplete="off"
+               placeholder="optional — only if your worker sets BADR_KEY">
+        <button class="go-sm" id="btnTest" type="button">Test</button>
+      </div>
+
+      <p class="cfg-note" id="aiNote">Not connected yet. Deploy the tiny worker once, then paste its
+address above and press Test. No API key and no account id are ever typed into this page.</p>
+    </div>
+
+    <div class="ai-log" id="aiLog">
+      <div class="ai-msg sys">Badr Assist. Six free models — Llama 3.3, Llama 3.1, Qwen Coder, DeepSeek R1,
+Mistral and GPT-OSS. Pick a model, set one address, done.</div>
+    </div>
+
+    <form class="ai-in" id="aiForm" autocomplete="off">
+      <input id="aiInput" placeholder="Ask about the map, a layer, a tool…" spellcheck="false">
+      <button class="go" type="submit" aria-label="Send"><svg class="ic sm"><use href="#i-send"/></svg></button>
+    </form>
+  </section>
+
+  <!-- ── BOTTOM DOCK ─────────────────────────────────────── -->
+  <footer class="dock">
+    <div class="dock-scroll">
+      <button class="slot used"><svg class="ic sm"><use href="#i-download"/></svg><span class="slot-t">Export</span></button>
+      <button class="slot used"><svg class="ic sm"><use href="#i-share"/></svg><span class="slot-t">Share view</span></button>
+      <button class="slot free"><svg class="ic sm"><use href="#i-plus"/></svg><span class="slot-t">Slot 3</span></button>
+      <button class="slot free"><svg class="ic sm"><use href="#i-plus"/></svg><span class="slot-t">Slot 4</span></button>
+      <button class="slot free"><svg class="ic sm"><use href="#i-plus"/></svg><span class="slot-t">Slot 5</span></button>
+    </div>
+    <div class="dock-pin">
+      <button class="btn icon ai-trigger" id="btnAi" title="Badr Assist — free AI chat" aria-expanded="false"><svg class="ic"><use href="#i-spark"/></svg></button>
+      <button class="btn icon mobile-only" id="btnSide" title="OSINT toolkit"><svg class="ic"><use href="#i-radar"/></svg></button>
+      <span class="clock" id="clock">00:00:00Z</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var app = document.getElementById('app');
+
+  /* rail toggles: click cycles on → off → (err → off) */
+  document.querySelectorAll('.rbtn[data-on]').forEach(function(b){
+    b.addEventListener('click', function(){
+      if (b.dataset.on === 'err'){ b.classList.remove('err'); b.classList.add('on'); b.dataset.on='1'; return; }
+      var on = b.classList.toggle('on');
+      b.dataset.on = on ? '1' : '0';
+      if (on) b.classList.remove('err');
+    });
+  });
+
+  /* header buttons */
+  function toggle(el){ el.classList.toggle('on'); el.classList.toggle('off', !el.classList.contains('on')); }
+  ['btnLayers','btnSearch','btnFull'].forEach(function(id){
+    var b = document.getElementById(id);
+    if (b) b.addEventListener('click', function(){ toggle(b); });
+  });
+
+  /* 2D is locked: clicking it does nothing (there is no 3D mode) */
+  /* master switches */
+  var sats = document.getElementById('masterSat');
+  var n = 8;
+  sats.addEventListener('click', function(){
+    toggle(sats);
+    sats.classList.remove('err');
+    n = sats.classList.contains('on') ? 8 : 0;
+    document.getElementById('satCount').textContent = n + '/8';
+  });
+  var air = document.getElementById('masterAir');
+  air.addEventListener('click', function(){ toggle(air); air.classList.remove('err'); });
+
+  /* side sheet on mobile */
+  var side = document.getElementById('side');
+  document.getElementById('btnSide').addEventListener('click', function(){
+    app.classList.toggle('side-open');
+  });
+  document.getElementById('sideClose').addEventListener('click', function(){
+    app.classList.remove('side-open');
+  });
+
+  /* clock */
+  function tick(){
+    var d = new Date();
+    var p = function(x){ return String(x).padStart(2,'0'); };
+    document.getElementById('clock').textContent =
+      p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds()) + 'Z';
+  }
+  tick(); setInterval(tick, 1000);
+})();
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════
+   BADR ASSIST — free Cloudflare Workers AI, several models
+
+   The page never holds a token. It talks to ONE address you own:
+       GET  <endpt>/api/models   → { models:[{id,label}], ok:true }
+       POST <endpt>/api/chat     → { reply }   body { messages, model }
+   Leave Endpt blank to use this page's own origin (/api/models).
+
+   Everything printed is real. There are no canned replies here.
+   ══════════════════════════════════════════════════════════ */
+(function(){
+  "use strict";
+
+  var K = { endpoint:"badr.ai.ep", model:"badr.ai.model", key:"badr.ai.key" };
+
+  var MODELS = [
+    { id:"@cf/meta/llama-3.3-70b-instruct-fp8-fast",        label:"Llama 3.3 70B — best all-round" },
+    { id:"@cf/openai/gpt-oss-120b",                          label:"GPT-OSS 120B — OpenAI open model" },
+    { id:"@cf/qwen/qwen2.5-coder-32b-instruct",              label:"Qwen 2.5 Coder 32B — code" },
+    { id:"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",     label:"DeepSeek R1 32B — reasoning" },
+    { id:"@cf/mistralai/mistral-small-3.1-24b-instruct",     label:"Mistral Small 3.1 24B" },
+    { id:"@cf/meta/llama-3.1-8b-instruct",                   label:"Llama 3.1 8B — fastest" }
+  ];
+
+  var SYS = "You are Badr Assist, a terse helper inside the BADR LIVE EARTH geospatial dashboard. " +
+            "The map is 2D flat only; there is no 3D globe mode, so never suggest one. " +
+            "Answer in short plain sentences, no tables, no emoji, no invented numbers. " +
+            "If you do not know something, say so.";
+
+  function $(id){ return document.getElementById(id); }
+  function get(k, d){ try { var v = localStorage.getItem(k); return v === null ? d : v; } catch(e){ return d; } }
+  function set(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+
+  var ai = $("ai"), scrim = $("scrim"), logEl = $("aiLog"), form = $("aiForm"), input = $("aiInput");
+  var stateEl = $("aiState"), stateTxt = $("aiStateTxt"), goBtn = form.querySelector(".go");
+  var cfgBox = $("aiCfg"), btnCfg = $("btnAiCfg"), sel = $("aiModel"), note = $("aiNote");
+  var appEl = $("app");
+
+  var cfg = {
+    endpoint: get(K.endpoint, "").replace(/\/+$/, ""),
+    model:    get(K.model, MODELS[0].id),
+    key:      get(K.key, "")
+  };
+  var history = [];
+  var busy = false;
+  var live = false;      /* true only after the endpoint actually answered */
+
+  /* ── ui helpers ─────────────────────────────────────────── */
+  function chip(kind, txt){
+    stateEl.className = "ai-st" + (kind ? " " + kind : "");
+    stateTxt.textContent = txt;
+  }
+  function say(kind, text){
+    var d = document.createElement("div");
+    d.className = "ai-msg " + kind;
+    d.textContent = text;
+    logEl.appendChild(d);
+    logEl.scrollTop = logEl.scrollHeight;
+    return d;
+  }
+  function fillModels(list){
+    var use = (list && list.length) ? list : MODELS;
+    sel.textContent = "";
+    use.forEach(function(m){
+      var o = document.createElement("option");
+      o.value = m.id;
+      o.textContent = m.label || m.id;
+      sel.appendChild(o);
+    });
+    var has = use.some(function(m){ return m.id === cfg.model; });
+    sel.value = has ? cfg.model : use[0].id;
+    cfg.model = sel.value;
+  }
+
+  /* ── address ────────────────────────────────────────────── */
+  function url(path){ return cfg.endpoint + path; }
+  function headers(json){
+    var h = json ? { "content-type":"application/json" } : {};
+    if (cfg.key) h["x-badr-key"] = cfg.key;
+    return h;
+  }
+  function explain(err, target){
+    var m = (err && err.message) ? err.message : String(err);
+    if (/failed to fetch|networkerror|load failed/i.test(m)){
+      return "The browser blocked the call to " + target + " before it left the page.\n" +
+             "That means the address did not answer with an Access-Control-Allow-Origin header. " +
+             "The supplied worker sends it; a plain API endpoint does not. " +
+             "Open " + target + " in a normal tab — if it answers there and not here, it is CORS, not the model.";
+    }
+    return m;
+  }
+  function readJson(res){
+    return res.text().then(function(txt){
+      var j = null;
+      try { j = JSON.parse(txt); } catch(e){}
+      return { status: res.status, ok: res.ok, json: j, text: txt };
+    });
+  }
+
+  /* ── test the endpoint ──────────────────────────────────── */
+  function test(silent){
+    /* only trust the input when the drawer is actually showing it,
+       otherwise a boot-time test would wipe the saved address */
+    if (!cfgBox.hasAttribute("hidden")){
+      cfg.endpoint = $("aiEndpoint").value.trim().replace(/\/+$/, "");
+      set(K.endpoint, cfg.endpoint);
+    }
+    var target = url("/api/models");
+
+    if (typeof fetch !== "function"){
+      chip("err", "no fetch");
+      note.textContent = "This browser has no fetch().";
+      return Promise.resolve(false);
+    }
+    chip("work", "testing…");
+    return fetch(target, { headers: headers(false) })
+      .then(readJson)
+      .then(function(r){
+        if (!r.ok){
+          live = false;
+          chip("err", "HTTP " + r.status);
+          note.textContent = "The address answered HTTP " + r.status + " at " + target + ".\n" +
+            ((r.json && (r.json.error || r.json.detail)) || r.text.slice(0, 200)) +
+            "\nCheck it is the worker root, with no /api on the end.";
+          if (!silent) say("bad", note.textContent);
+          return false;
+        }
+        live = true;
+        if (r.json && Array.isArray(r.json.models) && r.json.models.length) fillModels(r.json.models);
+        var n = sel.options.length;
+        chip("on", "ready · " + n + " models");
+        note.textContent = "Connected to " + (cfg.endpoint || location.origin) + "\n" +
+          n + " models available" + (cfg.key ? " · key sent" : " · no key") +
+          ". Pick a model above, then just type below.";
+        if (!silent) say("sys", "Connected. " + n + " models available. Nothing was invented to say this.");
+        return true;
+      })
+      .catch(function(err){
+        live = false;
+        chip("err", "no answer");
+        note.textContent = explain(err, target);
+        if (!silent) say("bad", note.textContent);
+        return false;
+      });
+  }
+
+  /* ── send ───────────────────────────────────────────────── */
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    var q = input.value.trim();
+    if (!q || busy) return;
+
+    /* A page opened from disk has no server of its own. Saying "CORS" here
+       would be a lie: there is simply nothing at that address to call. */
+    if (!cfg.endpoint && location.protocol === "file:"){
+      say("bad",
+        "Nothing was sent, because this page has no server to talk to.\n\n" +
+        "This file was opened from your disk. On its own it is only a skin — it cannot reach any AI.\n\n" +
+        "Two ways to give it one:\n" +
+        "1) Deploy badr-ai-app.js as a Cloudflare Worker. That single file serves this exact page AND the " +
+        "AI together, so there is nothing to configure — just open the address it gives you.\n" +
+        "2) Deploy badr-assist-worker.js, then paste its address into the key drawer and press Test.");
+      openAi(true);
+      return;
+    }
+
+    input.value = "";
+    say("me", q);
+    history.push({ role:"user", content:q });
+
+    var target = url("/api/chat");
+    var think = say("think", "asking " + (cfg.model.split("/").pop() || cfg.model) + " at " + (cfg.endpoint || location.origin) + " …");
+    busy = true; goBtn.disabled = true; chip("work", "thinking");
+
+    var messages = [{ role:"system", content:SYS }].concat(history.slice(-10));
+
+    fetch(target, {
+      method: "POST",
+      headers: headers(true),
+      body: JSON.stringify({ messages: messages, model: cfg.model, message: q })
+    })
+    .then(readJson)
+    .then(function(r){
+      if (!r.ok){
+        var why = (r.json && (r.json.error || r.json.detail)) || r.text.slice(0, 300);
+        throw new Error("HTTP " + r.status + " — " + why);
+      }
+      var j = r.json;
+      var out = (j && (j.reply || j.response || j.text || j.content))
+             || (j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content)
+             || (j && j.result && j.result.response);
+      if (typeof out !== "string" || !out.trim()){
+        throw new Error("the server answered " + r.status + " but with no reply field. Raw: " + r.text.slice(0, 240));
+      }
+      return out.trim();
+    })
+    .then(function(reply){
+      think.remove();
+      say("bot", reply);
+      history.push({ role:"assistant", content:reply });
+      chip("on", "ready · " + sel.options.length + " models");
+    })
+    .catch(function(err){
+      think.remove();
+      say("bad", "That did not go through.\n" + explain(err, target));
+      chip("err", "failed");
+      history.pop();
+      if (!cfg.endpoint) say("sys", "No endpoint set. Open the key icon and paste your worker address.");
+    })
+    .then(function(){
+      busy = false; goBtn.disabled = false;
+    });
+  });
+
+  /* ── drawer ─────────────────────────────────────────────── */
+  btnCfg.addEventListener("click", function(){
+    var opening = cfgBox.hasAttribute("hidden");
+    if (opening){
+      cfgBox.removeAttribute("hidden");
+      btnCfg.classList.add("on");
+      $("aiEndpoint").value = cfg.endpoint;
+      $("aiKey").value = cfg.key;
+      fillModels(null);
+    } else {
+      cfgBox.setAttribute("hidden", "");
+      btnCfg.classList.remove("on");
+    }
+  });
+
+  $("aiEndpoint").addEventListener("input", function(){
+    cfg.endpoint = this.value.trim().replace(/\/+$/, "");
+    set(K.endpoint, cfg.endpoint);
+  });
+  $("aiKey").addEventListener("input", function(){
+    cfg.key = this.value.trim();
+    set(K.key, cfg.key);
+  });
+  sel.addEventListener("change", function(){
+    cfg.model = this.value;
+    set(K.model, cfg.model);
+  });
+  $("btnTest").addEventListener("click", function(){ test(false); });
+  $("aiEndpoint").addEventListener("keydown", function(e){
+    if (e.key === "Enter"){ e.preventDefault(); test(false); }
+  });
+
+  /* ── open / close ───────────────────────────────────────── */
+  function isMobile(){
+    return window.matchMedia ? window.matchMedia("(max-width:820px)").matches : window.innerWidth <= 820;
+  }
+  function syncScrim(){
+    var mobile = isMobile();
+    scrim.classList.toggle("on",
+      (ai.classList.contains("open") && mobile) || (appEl.classList.contains("side-open") && mobile));
+  }
+  function openAi(v){
+    ai.classList.toggle("open", v);
+    ai.setAttribute("aria-hidden", v ? "false" : "true");
+    $("btnAi").classList.toggle("on", v);
+    $("btnAi").setAttribute("aria-expanded", v ? "true" : "false");
+    syncScrim();
+    if (v){
+      setTimeout(function(){ input.focus(); }, 70);
+      if (cfg.endpoint && !live) test(true);
+    }
+  }
+
+  $("btnAi").addEventListener("click", function(){ openAi(!ai.classList.contains("open")); });
+  $("btnAiClose").addEventListener("click", function(){ openAi(false); });
+  $("sideClose").addEventListener("click", function(){ appEl.classList.remove("side-open"); syncScrim(); });
+  $("btnSide").addEventListener("click", function(){ setTimeout(syncScrim, 0); });
+  scrim.addEventListener("click", function(){
+    openAi(false); appEl.classList.remove("side-open"); syncScrim();
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape"){ openAi(false); appEl.classList.remove("side-open"); syncScrim(); }
+  });
+  window.addEventListener("resize", syncScrim);
+
+  /* ── OSINT cards are still a skin: stop them reloading the page ── */
+  [].forEach.call(document.querySelectorAll("form.field"), function(f){
+    f.addEventListener("submit", function(e){
+      e.preventDefault();
+      var card = f.closest(".card");
+      var tt = card ? card.querySelector(".card-h .t") : null;
+      say("sys", (tt ? tt.textContent : "This tool") +
+        ": still a skin — it calls no live API yet. Nothing was sent.");
+      openAi(true);
+    });
+  });
+
+  /* ── boot ───────────────────────────────────────────────── */
+  fillModels(null);
+  syncScrim();
+
+  if (cfg.endpoint){
+    chip("", "not connected");
+    test(true);
+  } else if (location.protocol === "file:"){
+    chip("err", "no endpoint");
+    say("sys",
+      "Opened from disk — no server here, so no AI either.\n" +
+      "Deploy badr-ai-app.js (one file, serves this page and the AI together) and open its address, " +
+      "or deploy badr-assist-worker.js and paste its address in the key drawer.");
+  } else {
+    /* served over http(s): the page may well be sitting on a worker that
+       already has /api/models, so ask it instead of guessing */
+    chip("work", "checking…");
+    test(true).then(function(ok){
+      if (!ok) say("sys", "This page is being served without an AI backend. " +
+        "Deploy badr-ai-app.js to get both in one place.");
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
