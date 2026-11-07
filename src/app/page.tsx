@@ -1152,15 +1152,25 @@ export default function Dashboard() {
           setActiveLayers={setActiveLayers}
           data={data}
           capabilities={capabilities}
+          closeSignal={layerCloseSignal}
         />
       )}
 
       {/* ── RIGHT SIDEBAR — the OSINT toolkit, permanently visible ── */}
-      {!isMobile && <BadrOsint />}
+      {!isMobile && (
+        <BadrOsint
+          onOpenTool={(tab) => {
+            setShowIntel(true);
+            setShowAlerts(false);
+            setShowDesktopSearch(false);
+            setReconSeed({ query: '', tab, seq: Date.now() });
+          }}
+        />
+      )}
 
       {/* ── DIRECTIONS — opens beside the right-hand tool rail ── */}
       <div
-        className="absolute z-[400] w-[min(92vw,372px)] pointer-events-auto"
+        className="badr-directions absolute z-[400] w-[min(92vw,372px)] pointer-events-auto"
         style={isMobile ? { left: '50%', transform: 'translateX(-50%)' } : { right: '12px', top: '92px' }}
       >
         {navSession ? (
@@ -1511,10 +1521,29 @@ export default function Dashboard() {
           banner takes the same slot while the camera is in motion, so the
           story reads top to bottom — traverse, arrive, explain. */}
       <div
-        className="badr-dossier absolute z-[245] pointer-events-none flex px-3"
+        className={`badr-dossier absolute z-[245] pointer-events-none flex px-3${
+          !isMobile && (showAlerts || showIntel || showLayers) ? ' is-min' : ''
+        }`}
         style={isMobile ? { left: 0, right: 0, bottom: 150, justifyContent: 'center' } : { left: 8, top: 92, justifyContent: 'flex-start' }}
       >
-        <div className="pointer-events-auto flex justify-center">
+        {/* Only one panel may be open at a time. When another one opens, this
+            card folds into a chip carrying the address it is about; clicking
+            the chip closes the other panel and restores the card. */}
+        {!isMobile && (showAlerts || showIntel || showLayers) && (
+          <button
+            type="button"
+            className="badr-dossier-chip pointer-events-auto"
+            onClick={() => { setShowAlerts(false); setShowIntel(false); setShowLayers(false); }}
+            title={`Maximize — ${(data.earthquakes?.length ?? 0) + (data.news?.length ?? 0)} alerts`}
+          >
+            <span className="badr-dossier-chip-dot" aria-hidden="true" />
+            <span className="badr-dossier-chip-t">
+              {(showOrigin && origin?.record?.ip) || (showTarget && target?.record?.ip) || 'DOSSIER'}
+            </span>
+            <span className="badr-dossier-chip-a">MAXIMIZE</span>
+          </button>
+        )}
+        <div className="badr-dossier-body pointer-events-auto flex justify-center">
           <AnimatePresence mode="wait">
             {approach ? (
               <TeleportBanner

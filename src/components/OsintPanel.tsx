@@ -107,11 +107,11 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
   /* A hand-off from the map: put the address in the box, on the tool that was
      asked for, and clear whatever the last lookup left on screen. */
   useEffect(() => {
-    if (!seed?.query) return;
+    if (!seed) return;
+    /* A tab-only seed is legitimate: the sidebar's group buttons open the
+       toolkit on a group without naming a target yet. */
     if (seed.tab) setActiveTab(seed.tab);
-    setQuery(seed.query);
-    setResults(null);
-    setError('');
+    if (seed.query) { setQuery(seed.query); setResults(null); setError(''); }
   }, [seed?.seq]);
   // CHAIN INTEL carries two views: the daily brief needs no target, the wallet
   // lookup uses the shared query bar.

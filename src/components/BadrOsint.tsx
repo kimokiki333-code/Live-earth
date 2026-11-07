@@ -1,23 +1,32 @@
 'use client';
 
 /* ══════════════════════════════════════════════════════════════════════
-   BADR OSINT SIDEBAR — permanently visible, right hand side.
+   BADR INTELLIGENCE TOOLS — permanently visible, right hand side.
 
-   Not a skin: every card calls a real route that already exists in this
-   app, and prints what came back. Failures are shown as failures.
+   Renamed from "OSINT toolkit": this is identity, network, domain, threat
+   and chain work in one place, so the panel says INTELLIGENCE TOOLS and the
+   collapsed tab says INTEL SEARCH.
 
-     Username  GET /api/osint/username?username=
-     Email     GET /api/osint/email?email=
-     Domain    GET /api/osint/whois?domain=
-     IP / Geo  GET /api/osint/ip?ip=
-     Phone     GET /api/osint/phone?number=
+   Two layers of interaction, because 21 modules will not fit as 21 cards:
 
-   State colours: found = neon green · absent = silver · failure = yellow.
+     1  IDENTITY (live) — five fast lookups that answer inline, on the spot.
+        username · email · phone · ip/geo · domain
+
+     2  FULL TOOLKIT — four group buttons that open the complete 21-module
+        toolkit already in this app, straight into the right group:
+
+        NETWORK & HOST  6  port scan · vuln sweep · shodan · bgp · mac · ip sweep
+        DOMAIN & WEB    7  dns · whois · certs · ssl/tls · subdomains · headers · tech
+        IDENTITY LAB    5  username · github · phone · fingerprint · email
+        THREAT · CHAIN  3  threats · data leaks · chain intel + daily brief
+
+   Every route called here already exists. Nothing is mocked; a failure is
+   printed as a failure in yellow.
    ══════════════════════════════════════════════════════════════════════ */
 
 import { useState, type ReactNode } from 'react';
 
-/* ── the new icon set (inline, 24×24, one stroke weight) ───────────────── */
+/* ── the icon set (inline, 24×24, one stroke weight) ───────────────────── */
 const I = {
   radar: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4.5" /><path d="M12 12 19 6" /></>,
   user: <><circle cx="12" cy="8" r="3.6" /><path d="M4.5 20c.7-3.6 3.9-5.6 7.5-5.6s6.8 2 7.5 5.6" /></>,
@@ -26,6 +35,11 @@ const I = {
   pin: <><path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11Z" /><circle cx="12" cy="10" r="2.6" /></>,
   phone: <><path d="M6.5 3.5h3l1.6 4-2 1.4a11 11 0 0 0 5.6 5.6l1.4-2 4 1.6v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.5 5.7 2 2 0 0 1 6.5 3.5Z" /></>,
   run: <path d="M7 4.5 19 12 7 19.5Z" />,
+  server: <><rect x="3" y="4" width="18" height="7" rx="2" /><rect x="3" y="13" width="18" height="7" rx="2" /><path d="M7 7.5h.01M7 16.5h.01" /></>,
+  globe: <><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.4 3.6 8.5S14.4 18.1 12 20.5C9.6 18.1 8.4 15.1 8.4 12S9.6 5.9 12 3.5Z" /></>,
+  shield: <><path d="M12 3.2 19 6v6c0 4.2-3 7.3-7 8.8-4-1.5-7-4.6-7-8.8V6Z" /><path d="m9 12 2.2 2.2L15.5 10" /></>,
+  chain: <><path d="M10 13.5a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 1 0-5.7-5.7L11.5 6.3" /><path d="M14 10.5a4 4 0 0 0-5.7 0L5.5 13.3a4 4 0 1 0 5.7 5.7l1.3-1.3" /></>,
+  locate: <><circle cx="12" cy="12" r="3" /><circle cx="12" cy="12" r="8" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></>,
 };
 
 function Icon({ path, className }: { path: ReactNode; className?: string }) {
@@ -58,6 +72,25 @@ async function getJson(url: string) {
   if (!r.ok) throw new Error(j?.error || `${r.status} ${r.statusText}`);
   if (!j) throw new Error('server did not return JSON');
   return j;
+}
+
+function Result({ state }: { state: CardState }) {
+  return (
+    <>
+      {state.err && <p className="badr-res-err">{state.err}</p>}
+      {state.rows.length > 0 && (
+        <div className="badr-res">
+          {state.rows.map((r, i) => (
+            <div className="badr-res-i" key={`${r.label}-${i}`}>
+              <b title={r.label}>{r.label}</b>
+              <span className={`badr-res-v ${r.tone || ''}`}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {state.note && !state.err && <p className="badr-res-note">{state.note}</p>}
+    </>
+  );
 }
 
 function Card({
@@ -95,30 +128,26 @@ function Card({
         </button>
       </form>
 
-      {state.err && <p className="badr-res-err">{state.err}</p>}
-
-      {state.rows.length > 0 && (
-        <div className="badr-res">
-          {state.rows.map((r, i) => (
-            <div className="badr-res-i" key={`${r.label}-${i}`}>
-              <b title={r.label}>{r.label}</b>
-              <span className={`badr-res-v ${r.tone || ''}`}>{r.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {state.note && !state.err && <p className="badr-res-note">{state.note}</p>}
+      <Result state={state} />
     </section>
   );
 }
 
-export default function BadrOsint() {
+/* ── the four group launchers ─────────────────────────────────────────── */
+const LAUNCHERS = [
+  { tab: 'scanner', icon: I.server, title: 'NETWORK & HOST', sub: '6', list: 'Port scan · Vuln sweep · Shodan IoT · BGP route · MAC addr · IP sweep' },
+  { tab: 'dns', icon: I.globe, title: 'DOMAIN & WEB', sub: '7', list: 'DNS · WHOIS · Certs · SSL/TLS · Subdomains · Headers · Tech detect' },
+  { tab: 'github', icon: I.user, title: 'IDENTITY LAB', sub: '5', list: 'Username · GitHub recon · Phone intel · Fingerprint · Email intel' },
+  { tab: 'threats', icon: I.shield, title: 'THREAT & CHAIN', sub: '3', list: 'Threats · Data leaks · Chain intel + daily brief' },
+];
+
+export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string) => void }) {
   const user = useCard();
   const mail = useCard();
   const dom = useCard();
   const ip = useCard();
   const phone = useCard();
+  const self = useCard();
   const [collapsed, setCollapsed] = useState(false);
 
   /* ── username ── */
@@ -210,21 +239,36 @@ export default function BadrOsint() {
     } catch (e: any) { phone.fail(e.message); }
   };
 
+  /* ── self track — where this connection comes from ── */
+  const runSelf = async () => {
+    self.reset();
+    try {
+      const j = await getJson('/api/geo');
+      const rows: Row[] = [
+        { label: 'address', value: j.query || j.ip || '—' },
+        { label: 'place', value: [j.city, j.region, j.country].filter(Boolean).join(', ') || '—', tone: 'found' },
+        { label: 'isp', value: j.isp || j.org || '—' },
+        { label: 'coordinates', value: j.lat && j.lon ? `${Number(j.lat).toFixed(3)}, ${Number(j.lon).toFixed(3)}` : '—' },
+      ];
+      self.done(rows, 'Public record for this connection — city level, never a street address.');
+    } catch (e: any) { self.fail(e.message); }
+  };
+
   if (collapsed) {
     return (
-      <button type="button" className="badr-side-tab" onClick={() => setCollapsed(false)} title="Open OSINT toolkit">
+      <button type="button" className="badr-side-tab" onClick={() => setCollapsed(false)} title="Open intelligence tools">
         <Icon path={I.radar} className="w-4 h-4" />
-        <span>OSINT</span>
+        <span>INTEL SEARCH</span>
       </button>
     );
   }
 
   return (
-    <aside className="badr-side" aria-label="OSINT toolkit">
+    <aside className="badr-side" aria-label="Intelligence tools">
       <header className="badr-side-h">
         <Icon path={I.radar} className="badr-side-ic" />
-        <span className="badr-side-t">OSINT TOOLKIT</span>
-        <span className="badr-side-n">5 ENGINES</span>
+        <span className="badr-side-t">INTELLIGENCE TOOLS</span>
+        <span className="badr-side-n">21 MODULES</span>
         <button type="button" className="badr-side-x" onClick={() => setCollapsed(true)} title="Collapse">
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
             <path d="m9 5 7 7-7 7" />
@@ -233,16 +277,60 @@ export default function BadrOsint() {
       </header>
 
       <div className="badr-side-b">
+        <div className="badr-sec">
+          <span className="badr-sec-t">IDENTITY — LIVE</span>
+          <span className="badr-sec-n">5</span>
+        </div>
+
         <Card kind="username" title="USERNAME" sub="40+ SITES" icon={I.user} state={user.s}
           placeholder="username" onRun={runUser} />
         <Card kind="email" title="EMAIL" sub="BREACH + MX" icon={I.mail} state={mail.s}
           placeholder="name@domain.com" onRun={runMail} />
-        <Card kind="domain" title="DOMAIN" sub="WHOIS" icon={I.at} state={dom.s}
-          placeholder="example.com" onRun={runDom} />
-        <Card kind="ip" title="IP / GEO" sub="ASN · REP" icon={I.pin} state={ip.s}
-          placeholder="1.1.1.1" onRun={runIp} />
         <Card kind="phone" title="PHONE" sub="CARRIER" icon={I.phone} state={phone.s}
           placeholder="+20 …" onRun={runPhone} />
+        <Card kind="ip" title="IP / GEO" sub="ASN · REP" icon={I.pin} state={ip.s}
+          placeholder="1.1.1.1" onRun={runIp} />
+        <Card kind="domain" title="DOMAIN" sub="WHOIS" icon={I.at} state={dom.s}
+          placeholder="example.com" onRun={runDom} />
+
+        <div className="badr-sec badr-sec--gap">
+          <span className="badr-sec-t">FULL TOOLKIT</span>
+          <span className="badr-sec-n">21</span>
+        </div>
+
+        {LAUNCHERS.map((l) => (
+          <button
+            key={l.tab}
+            type="button"
+            className="badr-launch"
+            onClick={() => onOpenTool?.(l.tab)}
+            title={l.list}
+          >
+            <Icon path={l.icon} className="badr-launch-ic" />
+            <span className="badr-launch-t">{l.title}</span>
+            <span className="badr-launch-n">{l.sub}</span>
+            <svg viewBox="0 0 24 24" className="badr-launch-a" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+              <path d="m9 5 7 7-7 7" />
+            </svg>
+          </button>
+        ))}
+
+        <div className="badr-sec badr-sec--gap">
+          <span className="badr-sec-t">SELF</span>
+        </div>
+
+        <section className="badr-card">
+          <header className="badr-card-h">
+            <Icon path={I.locate} className="badr-card-ic" />
+            <span className="badr-card-t">MY LOCATION</span>
+            <span className="badr-card-s">SELF TRACK</span>
+          </header>
+          <button type="button" className="badr-go badr-go--wide" onClick={runSelf} disabled={self.s.busy}>
+            <Icon path={I.run} className="badr-go-ic" />
+            {self.s.busy ? 'TRACKING…' : 'TRACK MY PLACE'}
+          </button>
+          <Result state={self.s} />
+        </section>
       </div>
     </aside>
   );
