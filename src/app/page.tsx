@@ -32,6 +32,8 @@ const OsintPanel = dynamic(() => import('@/components/OsintPanel'));
 import { pickLandingCity } from '@/lib/landing-cities';
 import { locateAddress, detectOrigin, type LookupResult } from '@/lib/geo-ip';
 import GeoDossier, { TeleportBanner } from '@/components/GeoDossier';
+import BadrRail from '@/components/BadrRail';
+import BadrOsint from '@/components/BadrOsint';
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -1142,6 +1144,19 @@ export default function Dashboard() {
           aircraftAirports={aircraftAirports}
         />
       </ErrorBoundary>
+
+      {/* ── LEFT RAIL — every layer, one button each, neon green when on ── */}
+      {!isMobile && (
+        <BadrRail
+          activeLayers={activeLayers}
+          setActiveLayers={setActiveLayers}
+          data={data}
+          capabilities={capabilities}
+        />
+      )}
+
+      {/* ── RIGHT SIDEBAR — the OSINT toolkit, permanently visible ── */}
+      {!isMobile && <BadrOsint />}
 
       {/* ── DIRECTIONS — opens beside the right-hand tool rail ── */}
       <div
