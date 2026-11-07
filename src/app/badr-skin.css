@@ -177,13 +177,16 @@
 }
 
 .badr-alertpill b {
-  min-width: 20px;
+  min-width: 24px;
   height: 17px;
+  padding: 0 5px;
   display: inline-grid;
   place-items: center;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.22);
   font-size: 10px;
+  line-height: 1;
+  flex: 0 0 auto;
 }
 
 .badr-alertpill:hover {
@@ -207,7 +210,8 @@
   font-family: ui-monospace, monospace;
   font-size: 10px;
   letter-spacing: 0.06em;
-  overflow: hidden;
+  /* nothing in the strip may be clipped — the VIEW button used to be cut */
+  overflow: visible;
   white-space: nowrap;
 }
 
@@ -240,6 +244,8 @@
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.14em;
+  align-self: center;
+  flex: 0 0 auto;
 }
 
 .badr-aview:hover {
@@ -396,6 +402,7 @@ main > div.absolute.top-3 {
   transition: color .15s, background .15s, border-color .15s, box-shadow .15s;
 }
 
+.badr-rail-btn { font-size: 0; line-height: 1; }
 .badr-rail-ic { width: 19px; height: 19px; }
 
 /* ON — neon green */
@@ -406,21 +413,9 @@ main > div.absolute.top-3 {
   box-shadow: inset 3px 0 0 var(--badr-on), 0 0 14px rgba(57, 255, 136, 0.14);
 }
 
-.badr-rail-btn.on .badr-rail-n {
-  position: absolute;
-  right: 3px;
-  bottom: 3px;
-  min-width: 14px;
-  height: 13px;
-  padding: 0 3px;
-  border-radius: 4px;
-  display: grid;
-  place-items: center;
-  font-size: 8px;
-  font-weight: 900;
-  color: var(--badr-on);
-  background: rgba(57, 255, 136, 0.2);
-}
+/* No numbers on the rail. A count chip is extra geometry that collided with
+   the icon and spilled out of the 58px column; the count now lives in the
+   tooltip / aria-label. The ON state carries the meaning on its own. */
 
 .badr-rail-btn:hover { background: rgba(255, 255, 255, 0.07); color: #eef3fa; }
 .badr-rail-btn.off-dim { opacity: 0.42; }
@@ -669,4 +664,28 @@ main > div.absolute.top-3 {
 /* never show the rail or the sidebar on a phone — the drawers handle it */
 @media (max-width: 1023px) {
   .badr-rail, .badr-side, .badr-side-tab { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   CLEARANCE — nothing may sit under the rail, the dock or the sidebar.
+   These three rules exist because the deployed 16:19 build showed exactly
+   that: the dossier card slid 38px under the 58px rail, and the desktop
+   search popover landed on top of the dock buttons.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* dossier card starts to the RIGHT of the rail (rail is 58px, ≥1024 only) */
+@media (min-width: 1024px) {
+  .badr-dossier { left: 58px !important; }
+}
+
+/* the desktop search popover floats well clear of the dock and of the
+   OSINT sidebar — fixed, so no ancestor's layout can drag it back down */
+.badr-search-pop {
+  position: fixed !important;
+  bottom: 92px !important;
+  right: 16px !important;
+  z-index: 265 !important;
+}
+@media (min-width: 1100px) {
+  .badr-search-pop { right: 340px !important; }
 }

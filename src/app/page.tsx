@@ -1363,7 +1363,7 @@ export default function Dashboard() {
           <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">SEARCH</span>
           <AnimatePresence>
             {showDesktopSearch && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute bottom-[54px] right-0 w-[min(92vw,344px)] z-[260]">
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="badr-search-pop absolute bottom-[54px] right-0 w-[min(92vw,344px)] z-[260]">
                 <SearchBar
                   alwaysExpanded
                   center={mapCenter}
@@ -1511,7 +1511,7 @@ export default function Dashboard() {
           banner takes the same slot while the camera is in motion, so the
           story reads top to bottom — traverse, arrive, explain. */}
       <div
-        className="absolute z-[245] pointer-events-none flex px-3"
+        className="badr-dossier absolute z-[245] pointer-events-none flex px-3"
         style={isMobile ? { left: 0, right: 0, bottom: 150, justifyContent: 'center' } : { left: 8, top: 92, justifyContent: 'flex-start' }}
       >
         <div className="pointer-events-auto flex justify-center">

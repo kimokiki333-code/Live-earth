@@ -60,10 +60,10 @@ export default function BadrRail({ activeLayers, setActiveLayers, data, capabili
                 onClick={() => toggle(layer.key)}
                 aria-pressed={on}
                 title={`${layer.label}${n !== null ? ` — ${n}` : ''}${layer.description ? ` · ${layer.description}` : ''}`}
+                aria-label={`${layer.label}${n !== null ? ` — ${n} items` : ''}`}
                 className={`badr-rail-btn${on ? ' on' : ''}${dormant ? ' off-dim' : ''}`}
               >
                 <group.icon className="badr-rail-ic" />
-                {n !== null && on && <span className="badr-rail-n">{n > 99 ? '99+' : n}</span>}
                 <span className="badr-rail-tip">{layer.label}</span>
               </button>
             );
