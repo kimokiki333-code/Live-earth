@@ -906,3 +906,173 @@ main > div.absolute.top-3 {
 @media (min-width: 1100px) {
   .badr-directions { right: 332px !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   FLOATING WINDOWS — drag, resize from any edge or corner, stack
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-win {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(8, 12, 19, 0.97);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.66), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+  pointer-events: auto;
+}
+.badr-win--gold  { border-color: rgba(255, 215, 0, 0.30); }
+.badr-win--green { border-color: rgba(57, 255, 136, 0.30); }
+.badr-win--red   { border-color: rgba(255, 45, 85, 0.34); }
+.badr-win--cyan  { border-color: rgba(99, 230, 255, 0.28); }
+
+.badr-win-h {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  height: 32px;
+  padding: 0 6px 0 10px;
+  background: linear-gradient(180deg, rgba(19, 26, 38, 0.98), rgba(11, 16, 25, 0.98));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.badr-win-h:active { cursor: grabbing; }
+.badr-win.is-min .badr-win-h { border-bottom: 0; }
+
+.badr-win-dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: #ffd700; box-shadow: 0 0 8px currentColor; }
+.badr-win--green .badr-win-dot { background: var(--badr-on); }
+.badr-win--red .badr-win-dot { background: var(--badr-alert); }
+.badr-win--cyan .badr-win-dot { background: #63e6ff; }
+
+.badr-win-t {
+  font-family: ui-monospace, monospace;
+  font-size: 9.5px; font-weight: 900; letter-spacing: .16em;
+  color: #eef3fa; white-space: nowrap;
+}
+.badr-win-s {
+  font-family: ui-monospace, monospace;
+  font-size: 8px; font-weight: 700; letter-spacing: .12em;
+  color: #6d7789; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.badr-win-btns { margin-left: auto; display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
+.badr-win-b {
+  width: 20px; height: 20px; border-radius: 5px;
+  display: grid; place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: #aeb6c6;
+}
+.badr-win-b:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
+.badr-win-b--x:hover { background: rgba(255, 45, 85, 0.75); border-color: rgba(255, 45, 85, 0.9); color: #fff; }
+
+.badr-win-bd {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+/* resize grips — invisible until the pointer is over them */
+.badr-win-grip { position: absolute; z-index: 5; touch-action: none; }
+.badr-win-grip--n { top: -3px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.badr-win-grip--s { bottom: -3px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.badr-win-grip--e { right: -3px; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.badr-win-grip--w { left: -3px; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.badr-win-grip--ne { top: -4px; right: -4px; width: 14px; height: 14px; cursor: nesw-resize; }
+.badr-win-grip--nw { top: -4px; left: -4px; width: 14px; height: 14px; cursor: nwse-resize; }
+.badr-win-grip--se { bottom: -4px; right: -4px; width: 14px; height: 14px; cursor: nwse-resize; }
+.badr-win-grip--sw { bottom: -4px; left: -4px; width: 14px; height: 14px; cursor: nesw-resize; }
+.badr-win-grip--se::after {
+  content: ''; position: absolute; right: 3px; bottom: 3px;
+  width: 7px; height: 7px;
+  border-right: 1.5px solid rgba(255, 255, 255, 0.28);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.28);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LEFT RAIL — bigger hits, breathing room, no full-height slab behind it
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-rail {
+  width: 62px;
+  gap: 7px;
+  padding: 12px 0 16px;
+  background: transparent;
+  border-right: 0;
+  backdrop-filter: none;
+}
+.badr-rail-btn { width: 48px; height: 46px; border-radius: 12px; }
+.badr-rail-ic { width: 22px; height: 22px; }
+.badr-rail-btn.on { box-shadow: inset 3px 0 0 var(--badr-on), 0 0 16px rgba(57, 255, 136, 0.16); }
+.badr-rail-dot { top: 4px; right: 4px; min-width: 13px; height: 13px; font-size: 8.5px; }
+
+@media (min-width: 1024px) {
+  .badr-dossier { left: 62px !important; }
+}
+.badr-rail-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-top: 10px;
+}
+.badr-rail-foot .badr-rail-btn { color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.28); }
+.badr-rail-foot .badr-rail-btn:hover { color: #ffe886; border-color: rgba(255, 215, 0, 0.6); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   TOP BAR — shading belongs to the brand block, not to the whole strip
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-topbar { background: transparent; box-shadow: none; border-bottom: 0; backdrop-filter: none; }
+.badr-brand {
+  padding: 5px 12px 5px 6px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(8, 12, 19, 0.92), rgba(8, 12, 19, 0.74));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SIDEBAR — the title is the control; the counts read, never shout
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-side-h { cursor: pointer; }
+.badr-side-t { font-size: 10.5px; letter-spacing: .18em; }
+.badr-side-n { color: #cfd6e2; font-size: 9px; letter-spacing: .12em; }
+.badr-side-x { width: 24px; height: 24px; }
+
+/* the keyboard hint must never run into the placeholder */
+.badr-kbd {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #7c8698;
+  font-family: ui-monospace, monospace;
+  font-size: 8.5px;
+  letter-spacing: .10em;
+}
+
+/* inner padding for a window whose child has its own frame */
+.badr-win-pad { padding: 10px; }
+
+/* a quiet divider inside the sidebar */
+.badr-side-div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 1px;
+  color: #5c6675;
+  font-family: ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .18em;
+}
+.badr-side-div::before,
+.badr-side-div::after {
+  content: '';
+  height: 1px;
+  flex: 1 1 auto;
+  background: rgba(255, 255, 255, 0.09);
+}

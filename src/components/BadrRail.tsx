@@ -16,7 +16,7 @@
    ══════════════════════════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Wrench, Layers } from 'lucide-react';
 import { LAYER_GROUPS } from './LayerPanel';
 
 type Props = {
@@ -26,9 +26,11 @@ type Props = {
   capabilities?: Record<string, boolean>;
   /** Bumped by the page when another panel opens, so this flyout gets out of the way. */
   closeSignal?: number;
+  onOpenTools?: () => void;
+  onOpenFeatures?: () => void;
 };
 
-export default function BadrRail({ activeLayers, setActiveLayers, data, capabilities = {}, closeSignal = 0 }: Props) {
+export default function BadrRail({ activeLayers, setActiveLayers, data, capabilities = {}, closeSignal = 0, onOpenTools, onOpenFeatures }: Props) {
   const groups = LAYER_GROUPS
     .map((g) => ({ ...g, layers: g.layers.filter((l: any) => !l.requires || capabilities[l.requires]) }))
     .filter((g) => g.layers.length > 0);
@@ -105,6 +107,21 @@ export default function BadrRail({ activeLayers, setActiveLayers, data, capabili
             </button>
           );
         })}
+
+        <div className="badr-rail-foot">
+          {onOpenTools && (
+            <button type="button" className="badr-rail-btn" onClick={onOpenTools}
+              title="Intelligence tools — all 21 modules" aria-label="Open intelligence tools">
+              <Wrench className="badr-rail-ic" />
+            </button>
+          )}
+          {onOpenFeatures && (
+            <button type="button" className="badr-rail-btn" onClick={onOpenFeatures}
+              title="All layers and features" aria-label="Open all layers">
+              <Layers className="badr-rail-ic" />
+            </button>
+          )}
+        </div>
       </nav>
 
       {open && (

@@ -265,11 +265,17 @@ export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string) =
 
   return (
     <aside className="badr-side" aria-label="Intelligence tools">
-      <header className="badr-side-h">
+      <header className="badr-side-h" onClick={() => setCollapsed(true)} title="Collapse intelligence tools">
         <Icon path={I.radar} className="badr-side-ic" />
         <span className="badr-side-t">INTELLIGENCE TOOLS</span>
-        <span className="badr-side-n">21 MODULES</span>
-        <button type="button" className="badr-side-x" onClick={() => setCollapsed(true)} title="Collapse">
+        <span className="badr-side-n">21</span>
+        <button
+          type="button"
+          className="badr-side-x"
+          onClick={(e) => { e.stopPropagation(); setCollapsed(true); }}
+          title="Collapse"
+          aria-label="Collapse intelligence tools"
+        >
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
             <path d="m9 5 7 7-7 7" />
           </svg>
@@ -277,11 +283,6 @@ export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string) =
       </header>
 
       <div className="badr-side-b">
-        <div className="badr-sec">
-          <span className="badr-sec-t">IDENTITY — LIVE</span>
-          <span className="badr-sec-n">5</span>
-        </div>
-
         <Card kind="username" title="USERNAME" sub="40+ SITES" icon={I.user} state={user.s}
           placeholder="username" onRun={runUser} />
         <Card kind="email" title="EMAIL" sub="BREACH + MX" icon={I.mail} state={mail.s}
@@ -293,10 +294,7 @@ export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string) =
         <Card kind="domain" title="DOMAIN" sub="WHOIS" icon={I.at} state={dom.s}
           placeholder="example.com" onRun={runDom} />
 
-        <div className="badr-sec badr-sec--gap">
-          <span className="badr-sec-t">FULL TOOLKIT</span>
-          <span className="badr-sec-n">21</span>
-        </div>
+        <div className="badr-side-div" aria-hidden="true"><span>FULL TOOLKIT</span></div>
 
         {LAUNCHERS.map((l) => (
           <button
@@ -314,10 +312,6 @@ export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string) =
             </svg>
           </button>
         ))}
-
-        <div className="badr-sec badr-sec--gap">
-          <span className="badr-sec-t">SELF</span>
-        </div>
 
         <section className="badr-card">
           <header className="badr-card-h">

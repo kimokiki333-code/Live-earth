@@ -34,6 +34,7 @@ import { locateAddress, detectOrigin, type LookupResult } from '@/lib/geo-ip';
 import GeoDossier, { TeleportBanner } from '@/components/GeoDossier';
 import BadrRail from '@/components/BadrRail';
 import BadrOsint from '@/components/BadrOsint';
+import BadrWindow from '@/components/BadrWindow';
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -1153,6 +1154,8 @@ export default function Dashboard() {
           data={data}
           capabilities={capabilities}
           closeSignal={layerCloseSignal}
+          onOpenTools={() => { setShowIntel(true); setShowAlerts(false); setShowDesktopSearch(false); setShowDirections(false); }}
+          onOpenFeatures={() => { setShowLayers(true); setShowAlerts(false); }}
         />
       )}
 
@@ -1169,10 +1172,17 @@ export default function Dashboard() {
       )}
 
       {/* ── DIRECTIONS — opens beside the right-hand tool rail ── */}
-      <div
-        className="badr-directions absolute z-[400] w-[min(92vw,372px)] pointer-events-auto"
-        style={isMobile ? { left: '50%', transform: 'translateX(-50%)' } : { right: '12px', top: '92px' }}
-      >
+      {!isMobile && (navSession || showDirections) && (
+        <BadrWindow
+          id="route"
+          title="ROUTE"
+          subtitle={navSession ? 'NAVIGATION ACTIVE' : 'PLAN A JOURNEY'}
+          accent="cyan"
+          defaultW={392}
+          defaultTop={96}
+          side="right"
+          onClose={() => { setShowDirections(false); setNavSession(null); setNavProgress(null); setFollowUser(false); setActiveRoute(null); }}
+        >
         {navSession ? (
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
             <NavigationView
@@ -1228,7 +1238,51 @@ export default function Dashboard() {
             />
           </motion.div>
         )}
-      </div>
+        </BadrWindow>
+      )}
+
+      {isMobile && (
+        <div className="badr-directions absolute z-[400] w-[min(92vw,372px)] pointer-events-auto" style={{ left: '50%', transform: 'translateX(-50%)' }}>
+          {navSession ? (
+            <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
+              <NavigationView
+                key={navSession.key}
+                route={navSession.route}
+                destinationLabel={navSession.label}
+                fix={liveLocation}
+                onProgress={setNavProgress}
+                following={followUser}
+                onRecenter={() => setFollowUser(true)}
+                onExit={() => { setNavSession(null); setNavProgress(null); setFollowUser(false); }}
+                onReroute={async (fromPt) => {
+                  const dest = navSession.route.geometry.coordinates.at(-1)!;
+                  try {
+                    const res = await fetch(`/api/directions?from=${fromPt.lat},${fromPt.lng}&to=${dest[1]},${dest[0]}&mode=auto`);
+                    const data = await res.json();
+                    if (res.ok && !data.error) {
+                      setNavSession((n) => (n ? { ...n, route: data, key: Date.now() } : n));
+                      setActiveRoute({ ...data, from: fromPt, to: { lat: dest[1], lng: dest[0] } });
+                    }
+                  } catch { /* keep the old route */ }
+                }}
+              />
+            </motion.div>
+          ) : null}
+          {showDirections && (
+            <DirectionsBar
+              defaultFrom={origin?.record ? { lat: origin.record.lat, lng: origin.record.lng, label: `Your location · ${origin.record.city || origin.record.country || 'IP'}` } : homeLocation ? { lat: homeLocation.lat, lng: homeLocation.lng, label: 'Your location' } : null}
+              center={mapCenter ? { lat: mapCenter.lat, lng: mapCenter.lng } : null}
+              onRoute={(r) => setActiveRoute(r)}
+              onLiveLocation={setLiveLocation}
+              onFollowChange={setFollowUser}
+              onActiveSegment={(seg) => setActiveRoute((r) => (r ? { ...r, activeSegment: seg } : r))}
+              onStartNavigation={(r, label) => { setNavSession({ route: r, label, key: Date.now() }); setFollowUser(true); }}
+              onLocate={(lat, lng, zoom) => setFlyToLocation({ lat, lng, zoom, duration: 2600, ts: Date.now() })}
+              onClose={() => { setShowDirections(false); setActiveRoute(null); }}
+            />
+          )}
+        </div>
+      )}
 
 
       {/* ── FLIGHT WATCH ── */}
@@ -1371,9 +1425,18 @@ export default function Dashboard() {
             )}
           </button>
           <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">SEARCH</span>
-          <AnimatePresence>
-            {showDesktopSearch && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="badr-search-pop absolute bottom-[54px] right-0 w-[min(92vw,344px)] z-[260]">
+          {showDesktopSearch && (
+            <BadrWindow
+              id="search"
+              title="SEARCH"
+              subtitle="ADDRESS · PLACE · COORDINATES · IP"
+              accent="gold"
+              defaultW={430}
+              defaultTop={typeof window !== 'undefined' ? Math.max(96, window.innerHeight - 240) : 520}
+              side="right"
+              onClose={() => setShowDesktopSearch(false)}
+            >
+              <div className="badr-win-pad">
                 <SearchBar
                   alwaysExpanded
                   center={mapCenter}
@@ -1381,9 +1444,9 @@ export default function Dashboard() {
                   onTeleport={(t) => { void teleport(t); setShowDesktopSearch(false); }}
                   onLocate={(lat, lng, zoom) => { setFlyToLocation({ lat, lng, zoom, duration: 2600, ts: Date.now() }); setShowDesktopSearch(false); }}
                 />
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
+            </BadrWindow>
+          )}
         </div>
 
 
@@ -1516,82 +1579,88 @@ export default function Dashboard() {
       </AnimatePresence>
 
       {/* ── GEOLOCATION DOSSIER ──
-          One card at a time, centred above the bottom rail: either the address
-          the visitor arrived from or the one they looked up. The travel
-          banner takes the same slot while the camera is in motion, so the
-          story reads top to bottom — traverse, arrive, explain. */}
-      <div
-        className={`badr-dossier absolute z-[245] pointer-events-none flex px-3${
-          !isMobile && (showAlerts || showIntel || showLayers) ? ' is-min' : ''
-        }`}
-        style={isMobile ? { left: 0, right: 0, bottom: 150, justifyContent: 'center' } : { left: 8, top: 92, justifyContent: 'flex-start' }}
-      >
-        {/* Only one panel may be open at a time. When another one opens, this
-            card folds into a chip carrying the address it is about; clicking
-            the chip closes the other panel and restores the card. */}
-        {!isMobile && (showAlerts || showIntel || showLayers) && (
-          <button
-            type="button"
-            className="badr-dossier-chip pointer-events-auto"
-            onClick={() => { setShowAlerts(false); setShowIntel(false); setShowLayers(false); }}
-            title={`Maximize — ${(data.earthquakes?.length ?? 0) + (data.news?.length ?? 0)} alerts`}
+          The address you arrived from, or the one you looked up. On a desktop
+          it is a floating window: draggable, resizable, minimisable, and it
+          folds to its title bar by itself when another panel opens. On a phone
+          it stays a card above the bottom rail. */}
+      {(() => {
+        const cards = (
+              <AnimatePresence mode="wait">
+                {approach ? (
+                  <TeleportBanner
+                    key="approach"
+                    target={approach.target}
+                    from={approach.from}
+                    to={approach.to}
+                    startedAt={approach.startedAt}
+                    duration={approach.duration}
+                  />
+                ) : showTarget && target ? (
+                  <GeoDossier
+                    key="target"
+                    result={target}
+                    variant="target"
+                    compact={isMobile}
+                    onRecenter={target.record ? () => flyToTarget(
+                      target.record!.lat, target.record!.lng, target.record!.ip,
+                      [target.record!.city, target.record!.countryCode].filter(Boolean).join(' · '),
+                    ) : undefined}
+                    onScan={(address) => {
+                      setReconSeed({ query: address, tab: 'scanner', seq: Date.now() });
+                      setShowIntel(true);
+                      setShowTarget(false);
+                    }}
+                    onClose={() => { setShowTarget(false); setGeoPin(null); }}
+                  />
+                ) : showOrigin && origin ? (
+                  <GeoDossier
+                    key="origin"
+                    result={origin}
+                    variant="origin"
+                    compact={isMobile}
+                    onRecenter={origin.record ? () => flyToTarget(
+                      origin.record!.lat, origin.record!.lng, origin.record!.ip,
+                      [origin.record!.city, origin.record!.countryCode].filter(Boolean).join(' · '),
+                    ) : undefined}
+                    onScan={(address) => {
+                      setReconSeed({ query: address, tab: 'scanner', seq: Date.now() });
+                      setShowIntel(true);
+                      setShowOrigin(false);
+                    }}
+                    onClose={() => setShowOrigin(false)}
+                  />
+                ) : null}
+              </AnimatePresence>
+        );
+
+        if (isMobile) {
+          return (
+            <div
+              className="badr-dossier absolute z-[245] pointer-events-none flex px-3"
+              style={{ left: 0, right: 0, bottom: 150, justifyContent: 'center' }}
+            >
+              <div className="badr-dossier-body pointer-events-auto flex justify-center">{cards}</div>
+            </div>
+          );
+        }
+
+        return (
+          <BadrWindow
+            id="dossier"
+            title={(showTarget && target?.record?.ip) || (showOrigin && origin?.record?.ip) || 'GEO DOSSIER'}
+            subtitle={showTarget ? 'TARGET' : 'DETECTED ACCESS ORIGIN'}
+            accent="green"
+            defaultW={470}
+            defaultTop={100}
+            side="left"
+            collapsed={showAlerts || showIntel || showLayers}
+            onExpand={() => { setShowAlerts(false); setShowIntel(false); setShowLayers(false); }}
+            onClose={() => { setShowOrigin(false); setShowTarget(false); }}
           >
-            <span className="badr-dossier-chip-dot" aria-hidden="true" />
-            <span className="badr-dossier-chip-t">
-              {(showOrigin && origin?.record?.ip) || (showTarget && target?.record?.ip) || 'DOSSIER'}
-            </span>
-            <span className="badr-dossier-chip-a">MAXIMIZE</span>
-          </button>
-        )}
-        <div className="badr-dossier-body pointer-events-auto flex justify-center">
-          <AnimatePresence mode="wait">
-            {approach ? (
-              <TeleportBanner
-                key="approach"
-                target={approach.target}
-                from={approach.from}
-                to={approach.to}
-                startedAt={approach.startedAt}
-                duration={approach.duration}
-              />
-            ) : showTarget && target ? (
-              <GeoDossier
-                key="target"
-                result={target}
-                variant="target"
-                compact={isMobile}
-                onRecenter={target.record ? () => flyToTarget(
-                  target.record!.lat, target.record!.lng, target.record!.ip,
-                  [target.record!.city, target.record!.countryCode].filter(Boolean).join(' · '),
-                ) : undefined}
-                onScan={(address) => {
-                  setReconSeed({ query: address, tab: 'scanner', seq: Date.now() });
-                  setShowIntel(true);
-                  setShowTarget(false);
-                }}
-                onClose={() => { setShowTarget(false); setGeoPin(null); }}
-              />
-            ) : showOrigin && origin ? (
-              <GeoDossier
-                key="origin"
-                result={origin}
-                variant="origin"
-                compact={isMobile}
-                onRecenter={origin.record ? () => flyToTarget(
-                  origin.record!.lat, origin.record!.lng, origin.record!.ip,
-                  [origin.record!.city, origin.record!.countryCode].filter(Boolean).join(' · '),
-                ) : undefined}
-                onScan={(address) => {
-                  setReconSeed({ query: address, tab: 'scanner', seq: Date.now() });
-                  setShowIntel(true);
-                  setShowOrigin(false);
-                }}
-                onClose={() => setShowOrigin(false)}
-              />
-            ) : null}
-          </AnimatePresence>
-        </div>
-      </div>
+            {cards}
+          </BadrWindow>
+        );
+      })()}
 
       {/* ═══ MOBILE UI ═══ */}
       {isMobile && (

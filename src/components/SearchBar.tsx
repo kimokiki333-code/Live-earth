@@ -279,13 +279,14 @@ export default function SearchBar({ onLocate, onTeleport, resolving = false, alw
           value={value}
           onChange={(e) => handleSearch(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="CITY, COORDINATES, IP ADDRESS OR DOMAIN..."
+          placeholder="Address, place, coordinates or IP"
+          aria-label="Search by address, place, coordinates or IP"
           className="flex-1 bg-transparent text-[11px] text-[var(--text-primary)] font-mono tracking-wider outline-none placeholder:text-[var(--text-muted)] min-w-0"
           autoComplete="off"
           spellCheck={false}
         />
         {(loading || resolving) && <div className="w-3 h-3 border border-[var(--gold-primary)] border-t-transparent rounded-full animate-spin" />}
-        <span className="text-[9px] text-[var(--text-muted)] font-mono opacity-50 hidden md:inline">CTRL+F</span>
+        {!value && <span className="badr-kbd">CTRL+F</span>}
         {(value || !alwaysExpanded) && (
           <button onClick={() => {
             if (alwaysExpanded) { setValue(''); setResults([]); }
