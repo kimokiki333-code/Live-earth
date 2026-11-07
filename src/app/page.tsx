@@ -1224,43 +1224,65 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      {/* ── MAP VIEW CONTROLS ──
-           These four buttons get their own place. On the phone they take a
-           full row UNDER the title; on desktop they keep the top-right
-           corner alone. The title can never reach them. */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }} transition={hudIn(0.45)}
-        className="badr-viewstrip absolute flex flex-col items-end gap-1.5 pointer-events-none"
+      {/* ══════════════════════════════════════════════════════════
+           NEW DESIGN — the top bar.
+           Logo tile + BADR LIVE EARTH + the four map buttons on the
+           right, and the always-on alert pill after them. Under it the
+           red alert strip. On a phone the title takes the first row and
+           the four buttons take the second, so they can never touch.
+           ══════════════════════════════════════════════════════════ */}
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }}
+        transition={hudIn(0.15)}
+        className="badr-topbar"
       >
-        {/* Unified Control Strip */}
-        <div className="flex items-center gap-[3px] p-[3px] pointer-events-auto rounded-xl border border-[var(--border-primary)] bg-[var(--bg-panel)] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
-          <ViewSegment layoutId="view-projection" active={mapProjection === 'globe'} onClick={() => setMapProjection('globe')} title="3D Globe" icon={Globe} label="3D" />
-          <ViewSegment layoutId="view-projection" active={mapProjection === 'mercator'} onClick={selectFlatMap} title="2D Map" icon={MapPinned} label="2D" />
-          <div className="w-px h-5 mx-1 bg-[var(--border-secondary)]" />
-          <ViewSegment layoutId="view-style" active={mapStyle === 'dark'} onClick={() => setMapStyle('dark')} title="Night Mode" icon={Moon} label="NIGHT" />
-          <ViewSegment layoutId="view-style" active={mapStyle === 'satellite'} onClick={() => setMapStyle('satellite')} title="Satellite View" icon={Satellite} label="SAT" />
+        <div className="badr-bar">
+          <div className="badr-brand">
+            <span className="badr-logo" aria-hidden="true">B</span>
+            <span className="badr-names">
+              <span className="badr-name">BADR <b>LIVE EARTH</b></span>
+              <span className="badr-tag">GLOBAL MONITORING &amp; INTELLIGENCE</span>
+            </span>
+          </div>
+
+          <div className="badr-vstrip" role="group" aria-label="Map view">
+            <ViewSegment layoutId="view-projection" active={mapProjection === 'globe'} onClick={() => setMapProjection('globe')} title="3D Globe" icon={Globe} label="3D" />
+            <ViewSegment layoutId="view-projection" active={mapProjection === 'mercator'} onClick={selectFlatMap} title="2D Map" icon={MapPinned} label="2D" />
+            <span className="badr-vsep" />
+            <ViewSegment layoutId="view-style" active={mapStyle === 'dark'} onClick={() => setMapStyle('dark')} title="Night Mode" icon={Moon} label="NIGHT" />
+            <ViewSegment layoutId="view-style" active={mapStyle === 'satellite'} onClick={() => setMapStyle('satellite')} title="Satellite View" icon={Satellite} label="SAT" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              const next = !showAlerts;
+              setShowAlerts(next);
+              setShowIntel(false);
+              setShowDesktopSearch(false);
+              if (next) { setShowDirections(false); setLayerCloseSignal(v => v + 1); }
+            }}
+            className="badr-alertpill"
+            title="Live Alerts — always on"
+            aria-label="Live Alerts"
+            aria-expanded={showAlerts}
+          >
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span className="badr-api">ALERTS</span>
+            <b>{(data.earthquakes?.length ?? 0) + (data.news?.length ?? 0)}</b>
+          </button>
         </div>
 
-
-        {/* Scale Bar */}
-        {!isMobile && (
-          <div className="pl-0.5">
-            <ScaleBar zoom={mapView.zoom} latitude={mapView.latitude} />
-          </div>
-        )}
-      </motion.div>
-
-      {/* ── HEADER ── */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }} transition={hudIn(0.15)} className="badr-header absolute top-4 flex flex-col" style={{ left: isMobile ? '24px' : '64px', right: '24px' }}>
-        <div className="flex items-center gap-3 w-fit">
-          <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-lg bg-[var(--gold-primary)] flex items-center justify-center font-mono font-bold text-black text-sm tracking-widest shadow-[0_0_12px_rgba(212,175,55,0.4)]">B</div>
-          <div className="flex flex-col items-start gap-0.5">
-            <h1 className="badr-title text-lg md:text-xl font-bold text-[var(--gold-primary)] font-mono whitespace-nowrap">BADR LIVE EARTH</h1>
-            <span className="badr-sub text-[9px] md:text-[10px] font-mono opacity-80 uppercase text-[var(--cyan-primary)]">GLOBAL MONITORING &amp; INTELLIGENCE</span>
-          </div>
+        <div className="badr-alertstrip">
+          <span className="badr-live"><AlertTriangle className="w-3 h-3" />LIVE</span>
+          <span className="badr-atxt">
+            {(data.earthquakes?.length ?? 0)} seismic events · {(data.news?.length ?? 0)} reports ·
+            {(data.commercial_flights?.length ?? 0) + (data.private_flights?.length ?? 0) + (data.private_jets?.length ?? 0) + (data.military_flights?.length ?? 0)} aircraft tracked
+          </span>
+          <button type="button" className="badr-aview" onClick={() => { setShowAlerts(true); setShowIntel(false); }}>VIEW</button>
         </div>
-      </motion.div>
-
+      </motion.header>
 
       {/* ── NEW SIDEBAR (Root Level) ── */}
       {showLayers && !isMobile && <LayerPanel {...terrainPanelProps} revealed={revealed} data={data} activeLayers={activeLayers} setActiveLayers={setActiveLayers} theme={osirisTheme} capabilities={capabilities} closeSignal={layerCloseSignal} />}
