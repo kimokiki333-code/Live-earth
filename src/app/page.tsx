@@ -1644,6 +1644,10 @@ export default function Dashboard() {
           );
         }
 
+        /* Nothing to show yet: render nothing at all. An empty window frame is
+           worse than no window — it sits over the map saying nothing. */
+        if (!approach && !(showTarget && target) && !(showOrigin && origin)) return null;
+
         return (
           <BadrWindow
             id="dossier"
