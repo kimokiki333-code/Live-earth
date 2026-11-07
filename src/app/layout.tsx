@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import ErrorBoundary from '@/components/ErrorBoundary';
 import "./globals.css";
+import "./badr-skin.css";
 
 const SITE_URL = "https://badr-live-earth.live";
 const SITE_NAME = "BADR LIVE EARTH";

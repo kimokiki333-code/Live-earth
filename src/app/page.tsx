@@ -1224,11 +1224,13 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      {/* ── MAP VIEW CONTROLS ── */}
+      {/* ── MAP VIEW CONTROLS ──
+           These four buttons get their own place. On the phone they take a
+           full row UNDER the title; on desktop they keep the top-right
+           corner alone. The title can never reach them. */}
       <motion.div
         initial={{ opacity: 0, y: 20 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }} transition={hudIn(0.45)}
-        className="absolute top-3 right-3 z-[200] flex flex-col items-end gap-1.5 pointer-events-none"
-        style={{ left: isMobile ? '12px' : '120px' }}
+        className="badr-viewstrip absolute flex flex-col items-end gap-1.5 pointer-events-none"
       >
         {/* Unified Control Strip */}
         <div className="flex items-center gap-[3px] p-[3px] pointer-events-auto rounded-xl border border-[var(--border-primary)] bg-[var(--bg-panel)] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
@@ -1249,12 +1251,12 @@ export default function Dashboard() {
       </motion.div>
 
       {/* ── HEADER ── */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }} transition={hudIn(0.15)} className={`absolute top-4 z-[200] pointer-events-none flex flex-col`} style={{ left: isMobile ? '24px' : '64px', right: '24px' }}>
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }} transition={hudIn(0.15)} className="badr-header absolute top-4 flex flex-col" style={{ left: isMobile ? '24px' : '64px', right: '24px' }}>
         <div className="flex items-center gap-3 w-fit">
           <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-lg bg-[var(--gold-primary)] flex items-center justify-center font-mono font-bold text-black text-sm tracking-widest shadow-[0_0_12px_rgba(212,175,55,0.4)]">B</div>
           <div className="flex flex-col items-start gap-0.5">
-            <h1 className="text-lg md:text-xl font-bold tracking-[0.35em] text-[var(--gold-primary)] font-mono">BADR LIVE EARTH</h1>
-            <span className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] opacity-80 uppercase text-[var(--cyan-primary)]">GLOBAL MONITORING & INTELLIGENCE</span>
+            <h1 className="badr-title text-lg md:text-xl font-bold text-[var(--gold-primary)] font-mono whitespace-nowrap">BADR LIVE EARTH</h1>
+            <span className="badr-sub text-[9px] md:text-[10px] font-mono opacity-80 uppercase text-[var(--cyan-primary)]">GLOBAL MONITORING &amp; INTELLIGENCE</span>
           </div>
         </div>
       </motion.div>
@@ -1266,7 +1268,7 @@ export default function Dashboard() {
 
 
       {/* ── RIGHT TOOL STRIP (desktop only — mobile uses bottom nav) ── */}
-      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="absolute left-1/2 -translate-x-1/2 bottom-3 flex flex-row flex-wrap justify-center max-w-[97vw] gap-10 z-[250] pointer-events-auto bg-black/55 backdrop-blur-md px-5 py-1.5 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
+      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="badr-dock absolute left-1/2 -translate-x-1/2 flex flex-row flex-wrap justify-center max-w-[97vw] gap-10 z-[250] pointer-events-auto px-5 py-1.5 rounded-2xl">
         <div className="relative group">
           <button onClick={() => { const next = !showIntel; setShowIntel(next); setShowAlerts(false); setShowDesktopSearch(false); if (next) { setShowDirections(false); setLayerCloseSignal(v => v + 1); } }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showIntel ? 'bg-[var(--cyan-primary)]/20' : 'hover:bg-white/10'}`} title="Recon Toolkit — 20 intelligence tools (opens full-screen)" aria-label="OSINT Recon" aria-expanded={showIntel}>
             <Radar className={`w-4 h-4 ${showIntel ? 'text-[var(--cyan-primary)]' : 'text-white/60'}`} />
