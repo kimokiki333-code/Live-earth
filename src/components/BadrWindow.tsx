@@ -111,11 +111,27 @@ export default function BadrWindow({
     setMounted(true);
     const saved = MEMORY.get(id);
     if (saved) { setGeom(clampGeom(saved, minW, minH)); return; }
-    const vw = window.innerWidth;
-    const x = side === 'right' ? Math.max(12, vw - defaultW - 24)
-      : side === 'left' ? 76
-      : Math.max(12, Math.round((vw - defaultW) / 2));
-    const g: Geom = { x, y: defaultTop, w: defaultW, h: defaultH ?? null };
+    /* Place it inside the workspace, not the viewport: a window opening under
+       the 320px intelligence sidebar is a window you cannot read. */
+    const st = stageRect();
+    let x = side === 'right' ? Math.max(st.left, st.right - defaultW)
+      : side === 'left' ? st.left + 64
+      : Math.max(st.left, Math.round((st.left + st.right - defaultW) / 2));
+    /* Cascade: two windows opening in the same corner would land exactly on
+       top of each other, so the second looks like it replaced the first. Step
+       it down and across until it clears the ones already up. */
+    let y = defaultTop;
+    for (let k = 0; k < 8; k++) {
+      const clash = Array.from(document.querySelectorAll('.badr-win')).some((el) => {
+        const r = (el as HTMLElement).getBoundingClientRect();
+        return Math.abs(r.left - x) < 24 && Math.abs(r.top - y) < 24;
+      });
+      if (!clash) break;
+      x += 26; y += 26;
+    }
+    x = Math.min(x, Math.max(0, window.innerWidth - defaultW - 12));
+    y = Math.min(y, Math.max(0, window.innerHeight - 120));
+    const g: Geom = { x, y, w: defaultW, h: defaultH ?? null };
     MEMORY.set(id, g);
     setGeom(g);
   }, [id, side, defaultW, defaultH, defaultTop]);

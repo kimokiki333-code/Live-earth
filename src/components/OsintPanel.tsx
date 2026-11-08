@@ -74,6 +74,9 @@ interface OsintPanelProps {
   onClose?: () => void;
   /** Open straight into the big centre view instead of the small card. */
   startFullScreen?: boolean;
+  /** Rendered inside a BadrWindow: the window owns the frame, the title and
+   *  the min/max/close buttons, so this panel draws only its own two panes. */
+  hosted?: boolean;
   isMobile?: boolean;
   onSweepVisualize?: (data: any) => void;
   onScanGeolocate?: (target: string, data: any) => void;
@@ -85,7 +88,7 @@ interface OsintPanelProps {
   seed?: { query: string; tab?: string; group?: string; seq: number } | null;
 }
 
-function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, onClose, startFullScreen }: OsintPanelProps) {
+function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, onClose, startFullScreen, hosted = false }: OsintPanelProps) {
   const [activeTab, setActiveTab] = useState('scanner');
   const [isFullScreen, setIsFullScreen] = useState(Boolean(startFullScreen));
   const [query, setQuery] = useState('');
@@ -1882,6 +1885,35 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
   );
 
   if (isMobile) return renderContent();
+
+  /* Hosted in a window: no portal, no backdrop, no second title bar — the
+     BadrWindow already carries all three, and two of each is what made the
+     toolkit look like a different program from the rest of the app. */
+  if (hosted) {
+    return (
+      <div data-badr-fill="true" className="flex h-full min-h-0 flex-col">
+        {currentTab && (
+          <div className="flex flex-shrink-0 items-center gap-2 border-b border-[var(--border-secondary)] px-4 py-2">
+            <currentTab.icon className="h-3.5 w-3.5 flex-shrink-0" style={{ color: currentTab.color }} />
+            <span className="truncate text-[11px] font-mono font-bold tracking-wider" style={{ color: currentTab.color }}>
+              {currentTab.label}
+            </span>
+            <span className="truncate text-[10px] font-mono text-[var(--text-muted)]">{currentTab.blurb}</span>
+          </div>
+        )}
+        <div className="flex min-h-0 flex-1">
+          <aside className="w-[230px] flex-shrink-0 overflow-y-auto border-r border-[var(--border-secondary)] bg-[#0d0d0c]/60 styled-scrollbar">
+            {renderToolRail()}
+          </aside>
+          <main className="min-w-0 flex-1 overflow-y-auto p-5 styled-scrollbar">
+            <div className="w-full full-screen-mode-content">
+              {renderContent()}
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   if (isFullScreen) {
     const fullScreenNode = (

@@ -268,8 +268,9 @@ main > div.absolute.top-3 {
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
   backdrop-filter: blur(18px);
   /* ONE bar, anchored to the map area — never the full viewport, so it cannot
-     slide under the intelligence sidebar, and never two bars deep. */
-  left: 12px;
+     slide under the intelligence sidebar or the layer column, and never two
+     bars deep. */
+  left: 70px;
   right: calc(var(--badr-side-w, 320px) + 12px);
   bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
 }
@@ -1129,4 +1130,30 @@ main > div.absolute.top-3 {
   max-width: 100% !important;
   flex: 1 1 auto;
   min-height: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   WINDOW-HOSTED PANELS — the toolkit and the alerts live inside a
+   BadrWindow now. They must fill its body exactly, with no second scrollbar
+   around a panel that already scrolls its own list.
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-win-bd:has(> [data-badr-fill='true']) {
+  overflow: hidden;
+  padding: 0;
+}
+.badr-win-bd > [data-badr-fill='true'] {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LEFT COLUMN — air between the group buttons
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-rail {
+  gap: 7px;
+  padding: 14px 0 18px;
+}
+.badr-rail-btn {
+  height: 42px;
+  border-radius: 11px;
 }

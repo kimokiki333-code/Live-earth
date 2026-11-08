@@ -36,6 +36,9 @@ interface LiveAlertsProps {
   onWatchFeed?: (url: string, name: string) => void;
   /** Re-pull /api/news. */
   onRefresh?: () => Promise<unknown> | void;
+  /** Rendered inside a BadrWindow: the window owns the frame, the title and
+   *  the min/max/close buttons, so this panel must not draw a second set. */
+  hosted?: boolean;
 }
 
 const ACCENT = '#FF4081';
@@ -682,7 +685,7 @@ function WarningCard({ item, now, onLocate }: { item: WarningAlert; now: number;
   );
 }
 
-export default function LiveAlerts({ data, onLocate, onWatchFeed, onRefresh, pinsOn = false, onTogglePins, onPinnedChange }: LiveAlertsProps) {
+export default function LiveAlerts({ data, onLocate, onWatchFeed, onRefresh, pinsOn = false, onTogglePins, onPinnedChange, hosted = false }: LiveAlertsProps) {
   const [expanded, setExpanded] = useState(true);
   const [maximized, setMaximized] = useState(false);
   const [tab, setTab] = useState<Tab>('all');
@@ -907,7 +910,10 @@ export default function LiveAlerts({ data, onLocate, onWatchFeed, onRefresh, pin
   const controls = (
     <div className={`space-y-2 ${maximized ? '' : 'px-3 pt-2'}`}>
       {/* What needs attention right now */}
-      <div className="flex gap-1">
+      {/* Four tiles in a fixed grid. As a flex row their intrinsic widths
+          pushed the fourth ("M4 / QUAKE") past the drawer edge, which is the
+          clipped tile he photographed. */}
+      <div className="grid grid-cols-4 gap-1">
         {nowStats.map(stat => {
           const active = (stat.key === 'rocket' && newsKind === 'rocket')
             || (stat.key === 'breaking' && newsKind === 'breaking')
@@ -921,11 +927,11 @@ export default function LiveAlerts({ data, onLocate, onWatchFeed, onRefresh, pin
               onClick={stat.onClick}
               title={stat.title}
               aria-pressed={active}
-              className={`flex-1 rounded border px-1 py-1 text-center transition-colors ${active ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'}`}
+              className={`min-w-0 rounded border px-1 py-1 text-center transition-colors ${active ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'}`}
               style={{ borderColor: quiet ? '#26262A' : `${stat.color}55` }}
             >
-              <div className="text-[12px] font-mono font-bold leading-none tabular-nums" style={{ color: quiet ? '#5C5A54' : stat.color }}>{stat.value}</div>
-              <div className="mt-0.5 text-[7.5px] font-mono tracking-widest text-[#8A8880]">{stat.label}</div>
+              <div className="truncate text-[12px] font-mono font-bold leading-none tabular-nums" style={{ color: quiet ? '#5C5A54' : stat.color }}>{stat.value}</div>
+              <div className="mt-0.5 truncate text-[7.5px] font-mono tracking-widest text-[#8A8880]">{stat.label}</div>
             </button>
           );
         })}
@@ -1111,12 +1117,15 @@ export default function LiveAlerts({ data, onLocate, onWatchFeed, onRefresh, pin
 
   const content = (
     <motion.div
+      data-badr-fill={hosted ? 'true' : undefined}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.15, duration: 0.4 }}
       role={maximized ? 'dialog' : undefined}
       aria-label={maximized ? 'Live alerts' : undefined}
-      className={`glass-panel flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 ${maximized ? 'fixed inset-4 z-[9999] bg-[#0a0a09]/95 backdrop-blur-3xl' : expanded ? 'shrink-0 h-[560px] max-h-[82vh] resize-y' : 'shrink-0 h-auto'}`}
+      className={hosted
+        ? 'flex h-full min-h-0 flex-col overflow-hidden bg-transparent'
+        : `glass-panel flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 ${maximized ? 'fixed inset-4 z-[9999] bg-[#0a0a09]/95 backdrop-blur-3xl' : expanded ? 'shrink-0 h-[560px] max-h-[82vh] resize-y' : 'shrink-0 h-auto'}`}
     >
       {/* Header: title and controls, then a status line */}
       <div className="flex-shrink-0 border-b border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.3)]">
@@ -1125,7 +1134,8 @@ export default function LiveAlerts({ data, onLocate, onWatchFeed, onRefresh, pin
             type="button"
             onClick={() => setExpanded(!expanded)}
             aria-expanded={expanded}
-            className="flex min-w-0 items-center gap-2 outline-none"
+            className={`flex min-w-0 items-center gap-2 outline-none ${hosted ? 'invisible pointer-events-none' : ''}`}
+            aria-hidden={hosted || undefined}
           >
             <Radio className="w-3.5 h-3.5 flex-shrink-0" style={{ color: ACCENT }} />
             <span className="hud-text whitespace-nowrap text-[11px] text-[var(--text-primary)]">LIVE ALERTS</span>
@@ -1151,17 +1161,21 @@ export default function LiveAlerts({ data, onLocate, onWatchFeed, onRefresh, pin
                 <RefreshCw className={`w-3 h-3 text-[var(--text-muted)] ${refreshing ? 'animate-spin' : ''}`} />
               </button>
             )}
-            <button
-              onClick={() => { setMaximized(!maximized); if (!expanded) setExpanded(true); }}
-              className="p-1 rounded hover:bg-white/10 transition-colors"
-              title={maximized ? 'Restore (Esc)' : 'Maximize'}
-              aria-label={maximized ? 'Restore panel' : 'Maximize panel'}
-            >
-              {maximized ? <Minimize2 className="w-3 h-3 text-[var(--text-muted)]" /> : <Maximize2 className="w-3 h-3 text-[var(--text-muted)]" />}
-            </button>
-            <button onClick={() => setExpanded(!expanded)} className="p-1 rounded hover:bg-white/10 transition-colors" aria-label={expanded ? 'Collapse panel' : 'Expand panel'}>
-              {expanded ? <ChevronUp className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
-            </button>
+            {!hosted && (
+              <>
+                <button
+                  onClick={() => { setMaximized(!maximized); if (!expanded) setExpanded(true); }}
+                  className="p-1 rounded hover:bg-white/10 transition-colors"
+                  title={maximized ? 'Restore (Esc)' : 'Maximize'}
+                  aria-label={maximized ? 'Restore panel' : 'Maximize panel'}
+                >
+                  {maximized ? <Minimize2 className="w-3 h-3 text-[var(--text-muted)]" /> : <Maximize2 className="w-3 h-3 text-[var(--text-muted)]" />}
+                </button>
+                <button onClick={() => setExpanded(!expanded)} className="p-1 rounded hover:bg-white/10 transition-colors" aria-label={expanded ? 'Collapse panel' : 'Expand panel'}>
+                  {expanded ? <ChevronUp className="w-3.5 h-3.5 text-[var(--text-muted)]" /> : <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+                </button>
+              </>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1.5 px-3 pb-1.5 text-[9px] font-mono tracking-wider text-[#5C5A54] whitespace-nowrap overflow-hidden">
@@ -1183,7 +1197,7 @@ export default function LiveAlerts({ data, onLocate, onWatchFeed, onRefresh, pin
       </div>
 
       <AnimatePresence initial={false}>
-        {expanded && (
+        {(expanded || hosted) && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}

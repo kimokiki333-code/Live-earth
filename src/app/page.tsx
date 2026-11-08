@@ -10,7 +10,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Layers, Newspaper, Search, X, Globe, MapPinned, Route, Radar, Satellite, Moon, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Layers, Newspaper, Search, X, Globe, MapPinned, Route, Radar, Satellite, Moon, ExternalLink, AlertTriangle, Crosshair } from 'lucide-react';
 import { type TerrainStatus } from '@/lib/map-terrain';
 import { loadCameraCatalog, mergeCameraCatalog } from '@/lib/camera-catalog';
 import SearchBar from '@/components/SearchBar';
@@ -33,6 +33,7 @@ import { pickLandingCity } from '@/lib/landing-cities';
 import { locateAddress, detectOrigin, type LookupResult } from '@/lib/geo-ip';
 import GeoDossier, { TeleportBanner } from '@/components/GeoDossier';
 import BadrOsint from '@/components/BadrOsint';
+import BadrRail from '@/components/BadrRail';
 import BadrWindow from '@/components/BadrWindow';
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -66,6 +67,30 @@ const UptimeClock = () => {
   }, []);
   return <span className="hidden lg:inline">UPTIME: <span className="text-[var(--gold-primary)]">{uptime}</span></span>;
 };
+
+/* One bottom-bar control. Four of these, no more: the layer groups live in
+   the left column, where they were, and the alerts live in the top bar. */
+const DockBtn = ({ Icon, label, hint, active, tone, onClick }: {
+  Icon: any; label: string; hint: string; active: boolean; tone: string; onClick: () => void;
+}) => (
+  <div className="relative group">
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      title={hint}
+      aria-label={hint}
+      className={`relative w-10 h-10 rounded-xl flex items-center justify-center border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${active ? '' : 'border-white/10 bg-white/[0.03] hover:bg-white/10'}`}
+      style={active ? { background: `${tone}22`, borderColor: `${tone}66` } : undefined}
+    >
+      <Icon className="w-4 h-4" style={{ color: active ? tone : 'rgba(255,255,255,0.6)' }} />
+      {active && (
+        <span aria-hidden="true" className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full" style={{ background: tone }} />
+      )}
+    </button>
+    <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">{label}</span>
+  </div>
+);
 
 /** Extracts a watchable YouTube URL from embed/channel URLs */
 function getYouTubeWatchUrl(url: string): string {
@@ -159,6 +184,22 @@ export default function Dashboard() {
   /* A searched address — an IP or a domain — and its own dossier. */
   const [target, setTarget] = useState<LookupResult | null>(null);
   const [showTarget, setShowTarget] = useState(false);
+  /* The card is a thing you can close and reopen, not a one-shot. It used to
+     be shown once by the mount effect and then lost for the session: the only
+     thing that ever set showOrigin was the first load, so closing it deleted
+     it until a refresh. This separate flag means the data can stay loaded
+     while the window is hidden. */
+  const [dossierOn, setDossierOn] = useState(true);
+  /* A new lookup — the origin on first load, or a searched address — always
+     brings the window back, even if it was closed a moment ago. */
+  useEffect(() => { if (showOrigin || showTarget) setDossierOn(true); }, [showOrigin, showTarget]);
+  const toggleDossier = useCallback(() => {
+    setDossierOn((on) => {
+      const next = !on;
+      if (next) setShowOrigin(true);
+      return next;
+    });
+  }, []);
   const [resolving, setResolving] = useState(false);
   /** Handed to the recon console so "scan this address" lands on the right tool. */
   const [reconSeed, setReconSeed] = useState<{ query: string; tab?: string; group?: string; seq: number } | null>(null);
@@ -1150,9 +1191,6 @@ export default function Dashboard() {
         <BadrOsint
           onOpenTool={(tab, group) => {
             setShowIntel(true);
-            setShowAlerts(false);
-            setShowDesktopSearch(false);
-            setShowDirections(false);
             setReconSeed({ query: '', tab, group, seq: Date.now() });
           }}
         />
@@ -1323,11 +1361,8 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => {
-              const next = !showAlerts;
-              setShowAlerts(next);
-              setShowIntel(false);
-              setShowDesktopSearch(false);
-              if (next) { setShowDirections(false); setLayerCloseSignal(v => v + 1); }
+              setShowAlerts((next) => !next);
+              setLayerCloseSignal((v) => v + 1);
             }}
             className="badr-alertpill"
             title="Live Alerts — always on"
@@ -1346,88 +1381,75 @@ export default function Dashboard() {
             {(data.earthquakes?.length ?? 0)} seismic events · {(data.news?.length ?? 0)} reports ·
             {(data.commercial_flights?.length ?? 0) + (data.private_flights?.length ?? 0) + (data.private_jets?.length ?? 0) + (data.military_flights?.length ?? 0)} aircraft tracked
           </span>
-          <button type="button" className="badr-aview" onClick={() => { setShowAlerts(true); setShowIntel(false); }}>VIEW</button>
+          <button type="button" className="badr-aview" onClick={() => { setShowAlerts(true); }}>VIEW</button>
         </div>
       </motion.header>
 
-      {/* ══ ONE BOTTOM BAR ══
-          The layer groups and the four tool buttons used to be two separate
-          floating bars anchored near the bottom centre. The tool bar (z-250)
-          sat on top of the right-hand layer groups (z-240) — that is why the
-          groups went from seven down to four as the window narrowed, and why
-          opening a panel looked like buttons disappearing. One row now, so
-          nothing in the bar can cover anything else in the bar. */}
-      {!isMobile && <motion.div data-badr-dock initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="badr-dock absolute flex flex-row flex-wrap items-center justify-center gap-3 max-w-[calc(100vw-24px)] z-[250] pointer-events-auto px-3 py-2 rounded-2xl">
-        {showLayers && (
-          <LayerPanel
-            embedded
-            {...terrainPanelProps}
-            revealed={revealed}
-            data={data}
-            activeLayers={activeLayers}
-            setActiveLayers={setActiveLayers}
-            theme={osirisTheme}
-            capabilities={capabilities}
-            closeSignal={layerCloseSignal}
+      {/* ── LEFT RAIL — the layer groups, one button each, back in the column ── */}
+      {showLayers && !isMobile && (
+        <BadrRail
+          activeLayers={activeLayers}
+          setActiveLayers={setActiveLayers}
+          data={data}
+          capabilities={capabilities}
+          closeSignal={layerCloseSignal}
+        />
+      )}
+
+      {/* ══ BOTTOM BAR — FOUR CONTROLS, NOTHING ELSE ══
+          Only what belongs here: recon, route, search, and the locate button
+          that brings the live-origin card back. The layer groups are in the
+          left column; ALERTS is the button in the top bar. Nothing repeats. */}
+      {!isMobile && (
+        <motion.div
+          data-badr-dock
+          initial={{ opacity: 0, y: 16 }}
+          animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+          transition={hudIn(0.3)}
+          className="badr-dock absolute flex flex-row flex-wrap items-center justify-center gap-3 max-w-[calc(100vw-24px)] z-[250] pointer-events-auto px-3 py-2 rounded-2xl"
+        >
+          <DockBtn
+            Icon={Radar}
+            label="RECON"
+            tone="#63e6ff"
+            active={showIntel}
+            hint="Intelligence — 21 modules"
+            onClick={() => { setShowIntel((v) => !v); setLayerCloseSignal((v) => v + 1); }}
           />
-        )}
-        {showLayers && <span className="badr-dock-sep" aria-hidden="true" />}
-        <div className="flex flex-row flex-wrap items-center justify-center gap-3">
-        <div className="relative group">
-          <button onClick={() => { const next = !showIntel; setShowIntel(next); setShowAlerts(false); setShowDesktopSearch(false); if (next) { setShowDirections(false); setLayerCloseSignal(v => v + 1); } }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showIntel ? 'bg-[var(--cyan-primary)]/20' : 'hover:bg-white/10'}`} title="Recon Toolkit — 20 intelligence tools (opens full-screen)" aria-label="OSINT Recon" aria-expanded={showIntel}>
-            <Radar className={`w-4 h-4 ${showIntel ? 'text-[var(--cyan-primary)]' : 'text-white/60'}`} />
-            {showIntel && (
-              <span
-                aria-hidden="true"
-                className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full bg-current text-[var(--cyan-primary)]"
-              />
-            )}
-          </button>
-          <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">RECON</span>
-        </div>
 
+          <DockBtn
+            Icon={Route}
+            label="ROUTE"
+            tone="#ffd700"
+            active={showDirections}
+            hint="Directions — turn-by-turn routing"
+            onClick={() => {
+              if (showDirections) setActiveRoute(null);
+              setShowDirections((v) => !v);
+              setLayerCloseSignal((v) => v + 1);
+            }}
+          />
 
-        
+          <DockBtn
+            Icon={Search}
+            label="SEARCH"
+            tone="#ffd700"
+            active={showDesktopSearch}
+            hint="Search — locations, cities, coordinates"
+            onClick={() => { setShowDesktopSearch((v) => !v); setLayerCloseSignal((v) => v + 1); }}
+          />
 
-        <div className="relative group">
-          <button onClick={() => { const next = !showAlerts; setShowAlerts(next); setShowIntel(false); setShowDesktopSearch(false); if (next) { setShowDirections(false); setLayerCloseSignal(v => v + 1); } }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showAlerts ? 'bg-[#FF3D3D]/20' : 'hover:bg-white/10'}`} title="Live Alerts — earthquakes, conflicts, breaking news" aria-label="Live Alerts" aria-expanded={showAlerts}>
-            <AlertTriangle className={`w-4 h-4 ${showAlerts ? 'text-[#FF3D3D]' : 'text-white/60'}`} />
-            {showAlerts && (
-              <span
-                aria-hidden="true"
-                className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full bg-current text-[#FF3D3D]"
-              />
-            )}
-          </button>
-          <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">ALERTS</span>
-        </div>
+          {/* The card used to disappear for good once closed: only the mount
+              effect could set showOrigin. This is the way back to it. */}
+          <DockBtn
+            Icon={Crosshair}
+            label="LOCATE"
+            tone="#39ff88"
+            active={dossierOn}
+            hint="Locate — the detected access origin, with recenter, scan and footprint"
+            onClick={toggleDossier}
+          />
 
-        
-
-        <div className="relative group">
-          <button onClick={() => { const next = !showDirections; setShowDirections(next); if (!next) { setActiveRoute(null); } setShowDesktopSearch(false); setShowIntel(false); setShowAlerts(false); if (next) setLayerCloseSignal(v => v + 1); }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDirections ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Directions — turn-by-turn routing" aria-label="Directions" aria-expanded={showDirections}>
-            <Route className={`w-4 h-4 ${showDirections ? 'text-[var(--gold-primary)]' : 'text-white/60'}`} />
-            {showDirections && (
-              <span
-                aria-hidden="true"
-                className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full bg-current text-[var(--gold-primary)]"
-              />
-            )}
-          </button>
-          <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">ROUTE</span>
-        </div>
-
-        <div className="relative group">
-          <button onClick={() => { const next = !showDesktopSearch; setShowDesktopSearch(next); setShowIntel(false); setShowAlerts(false); if (next) { setShowDirections(false); setLayerCloseSignal(v => v + 1); } }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showDesktopSearch ? 'bg-[var(--gold-primary)]/20' : 'hover:bg-white/10'}`} title="Search — find locations, cities, coordinates" aria-label="Search" aria-expanded={showDesktopSearch}>
-            <Search className={`w-4 h-4 ${showDesktopSearch ? 'text-[var(--gold-primary)]' : 'text-white/60'}`} />
-            {showDesktopSearch && (
-              <span
-                aria-hidden="true"
-                className="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full bg-current text-[var(--gold-primary)]"
-              />
-            )}
-          </button>
-          <span className="absolute bottom-11 left-1/2 -translate-x-1/2 px-2 py-1 text-[9px] font-mono tracking-wider text-white bg-black/85 backdrop-blur-sm rounded whitespace-nowrap opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">SEARCH</span>
           {showDesktopSearch && (
             <BadrWindow
               id="search"
@@ -1450,22 +1472,23 @@ export default function Dashboard() {
               </div>
             </BadrWindow>
           )}
-        </div>
+        </motion.div>
+      )}
 
-
-        
-
-
-
-        
-
-
-        </div>
-      </motion.div>}
-
-      {/* ── RECON TOOLKIT — big centre pop-up (all 20 tools visible) ── */}
+      {/* ── INTELLIGENCE — the 21 modules, on the same window shell as everything else ── */}
       {showIntel && !isMobile && (
-        <OsintPanel seed={reconSeed} startFullScreen onClose={() => setShowIntel(false)} onSweepVisualize={setSweepData} onScanGeolocate={(target, data) => {
+        <BadrWindow
+          id="intel"
+          title="INTELLIGENCE"
+          subtitle="21 MODULES · 4 GROUPS"
+          accent="cyan"
+          defaultW={980}
+          defaultH={660}
+          defaultTop={120}
+          side="centre"
+          onClose={() => setShowIntel(false)}
+        >
+        <OsintPanel hosted seed={reconSeed} onClose={() => setShowIntel(false)} onSweepVisualize={setSweepData} onScanGeolocate={(target, data) => {
           setScanTargets(prev => {
             const existing = prev.filter(t => t.id !== target);
             return [{ id: target, timestamp: Date.now(), ...data }, ...existing].slice(0, 10);
@@ -1477,21 +1500,25 @@ export default function Dashboard() {
             [data.city, data.country].filter(Boolean).join(' · ') || undefined,
           );
         }} />
+        </BadrWindow>
       )}
 
-      {/* ── LIVE ALERTS — top-left pop-up, same shelf as the route planner ── */}
-      <AnimatePresence>
-        {showAlerts && !isMobile && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute left-3 top-[92px] z-[300] w-[min(92vw,368px)] max-h-[calc(100vh-190px)] overflow-y-auto styled-scrollbar pointer-events-auto"
-          >
-            <LiveAlerts data={data} onLocate={(lat, lng, options) => setFlyToLocation({ lat, lng, zoom: options?.zoom, alertId: options?.alertId, ts: Date.now() })} pinsOn={activeLayers.alert_pins} onTogglePins={on => setActiveLayers(prev => ({ ...prev, alert_pins: on }))} onPinnedChange={setPinnedAlertIds} onWatchFeed={(url, name) => { setLiveFeedUrl(url); setLiveFeedName(name); }} onRefresh={() => fetchEndpoint('/api/news', newsTransform)} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ── LIVE ALERTS — a real window now: drag it, resize it, minimise it ── */}
+      {showAlerts && !isMobile && (
+        <BadrWindow
+          id="alerts"
+          title="LIVE ALERTS"
+          subtitle="EARTHQUAKES · CONFLICTS · BREAKING NEWS"
+          accent="red"
+          defaultW={430}
+          defaultH={640}
+          defaultTop={104}
+          side="left"
+          onClose={() => setShowAlerts(false)}
+        >
+          <LiveAlerts hosted data={data} onLocate={(lat, lng, options) => setFlyToLocation({ lat, lng, zoom: options?.zoom, alertId: options?.alertId, ts: Date.now() })} pinsOn={activeLayers.alert_pins} onTogglePins={on => setActiveLayers(prev => ({ ...prev, alert_pins: on }))} onPinnedChange={setPinnedAlertIds} onWatchFeed={(url, name) => { setLiveFeedUrl(url); setLiveFeedName(name); }} onRefresh={() => fetchEndpoint('/api/news', newsTransform)} />
+        </BadrWindow>
+      )}
 
       {/* ── LIVE FEED VIEWER OVERLAY ── */}
       <AnimatePresence>
@@ -1651,26 +1678,27 @@ export default function Dashboard() {
         /* Nothing to show yet: render nothing at all. An empty window frame is
            worse than no window — it sits over the map saying nothing. */
         if (!approach && !(showTarget && target) && !(showOrigin && origin)) return null;
+        /* Closed from its own title bar — the data stays, the window does not.
+           LOCATE in the bottom bar brings it straight back. */
+        if (!dossierOn) return null;
 
         /* Opening ALERTS or the toolkit folds the card to its title bar, so the
-           thing just opened is not buried under a maximised dossier. It is not
-           tied to the layer bar any more: that flag is on by default, which is
-           why the card used to open as a small chip on a first visit. */
+           thing just opened is not buried under a maximised dossier. */
         return (
           <BadrWindow
             id="dossier"
             title={(showTarget && target?.record?.ip) || (showOrigin && origin?.record?.ip) || 'GEO DOSSIER'}
             subtitle={showTarget ? 'TARGET' : 'DETECTED ACCESS ORIGIN'}
             accent="green"
+            /* 470 × 620 is the size he pointed at: about a quarter of the
+               page, next to the route panel, not covering the map. It opens
+               here — `defaultMax` was the mistake that made it fill the
+               screen on load. Drag it, or pull any of the eight edges. */
             defaultW={470}
-            defaultTop={100}
+            defaultH={620}
+            defaultTop={104}
             side="left"
-            /* Opens filling the screen for every visitor, then they may
-               minimise it. He asked for this five times. */
-            defaultMax
-            collapsed={showAlerts || showIntel}
-            onExpand={() => { setShowAlerts(false); setShowIntel(false); }}
-            onClose={() => { setShowOrigin(false); setShowTarget(false); }}
+            onClose={() => { setShowOrigin(false); setShowTarget(false); setDossierOn(false); }}
           >
             {cards}
           </BadrWindow>
