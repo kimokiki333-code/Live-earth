@@ -197,6 +197,9 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
   const alertPinsRef = useRef<AlertPinFeature[]>([]);
   const openAlertPinRef = useRef<((id: string) => void) | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  /* Basemap health. A black map is indistinguishable from a broken app, so if
+     the tile host refuses us we say so on the map instead of leaving a void. */
+  const [tileFails, setTileFails] = useState(0);
 
   // Do not replay an earlier explicit zoom request after theme/retry remounts.
   const lastTerrainFocus = useRef(terrainFocus);
@@ -329,8 +332,12 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     
-    // Select basemap style
-    const styleUrl = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+    /* The style document ships with the app. Fetching it from CARTO made the
+       map's very first paint depend on a third party: when that request was
+       slow or blocked the canvas stayed black and the app looked broken on
+       every host, which is exactly the report we kept getting. The local copy
+       is the same document minus one network round trip. */
+    const styleUrl = '/dark-matter-style.json';
 
     const container = containerRef.current;
     maplibregl.setWorkerUrl(`/vendor/maplibre/${maplibregl.getVersion()}/maplibre-gl-worker.mjs`);
@@ -387,6 +394,16 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
       }
     }
     if (!map) return;
+
+    /* Count refused basemap requests. One or two are retried silently; a run of
+       them means the tile host is unreachable from the user's network, and the
+       honest thing is to say so rather than show a black rectangle. */
+    map.on('error', (e: any) => {
+      const url = e?.error?.url || e?.sourceId || '';
+      if (typeof url === 'string' && (url.includes('cartocdn') || url.includes('.mvt') || url.includes('/fonts/'))) {
+        setTileFails((n) => n + 1);
+      }
+    });
 
     map.on('load', () => {
       mapRef.current = map;
@@ -3341,6 +3358,12 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
   return (
     <>
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
+      {tileFails > 3 && (
+        <div className="badr-map-warn" role="status">
+          Basemap tiles are not answering from this network — the map will stay dark.
+          Layers, search and the tools still work.
+        </div>
+      )}
       {mapReady && mapRef.current && (
         <CctvPreviews
           mapRef={mapRef}

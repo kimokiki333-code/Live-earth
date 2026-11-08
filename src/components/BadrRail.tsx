@@ -16,7 +16,7 @@
    ══════════════════════════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState } from 'react';
-import { X, Wrench, Layers } from 'lucide-react';
+import { X, Layers } from 'lucide-react';
 import { LAYER_GROUPS } from './LayerPanel';
 
 type Props = {
@@ -109,12 +109,6 @@ export default function BadrRail({ activeLayers, setActiveLayers, data, capabili
         })}
 
         <div className="badr-rail-foot">
-          {onOpenTools && (
-            <button type="button" className="badr-rail-btn" onClick={onOpenTools}
-              title="Intelligence tools — all 21 modules" aria-label="Open intelligence tools">
-              <Wrench className="badr-rail-ic" />
-            </button>
-          )}
           {onOpenFeatures && (
             <button type="button" className="badr-rail-btn" onClick={onOpenFeatures}
               title="All layers and features" aria-label="Open all layers">

@@ -162,7 +162,7 @@ export default function Dashboard() {
   const [showTarget, setShowTarget] = useState(false);
   const [resolving, setResolving] = useState(false);
   /** Handed to the recon console so "scan this address" lands on the right tool. */
-  const [reconSeed, setReconSeed] = useState<{ query: string; tab?: string; seq: number } | null>(null);
+  const [reconSeed, setReconSeed] = useState<{ query: string; tab?: string; group?: string; seq: number } | null>(null);
   const [geoPin, setGeoPin] = useState<{
     lat: number; lng: number; label: string; sub?: string; tone?: 'origin' | 'target'; ts: number;
   } | null>(null);
@@ -1162,11 +1162,12 @@ export default function Dashboard() {
       {/* ── RIGHT SIDEBAR — the OSINT toolkit, permanently visible ── */}
       {!isMobile && (
         <BadrOsint
-          onOpenTool={(tab) => {
+          onOpenTool={(tab, group) => {
             setShowIntel(true);
             setShowAlerts(false);
             setShowDesktopSearch(false);
-            setReconSeed({ query: '', tab, seq: Date.now() });
+            setShowDirections(false);
+            setReconSeed({ query: '', tab, group, seq: Date.now() });
           }}
         />
       )}

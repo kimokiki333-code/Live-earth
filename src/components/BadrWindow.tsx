@@ -36,6 +36,22 @@ let TOP_Z = 900;
 const EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;
 type Edge = typeof EDGES[number];
 
+/* A window must never be able to leave the viewport. The first cut of this
+   clamped x to `innerWidth - 120` on the LEFT of that expression and to 0 on
+   the right, which let a west-edge resize walk a window to x = -1400 and lose
+   it for good. Every geometry update now goes through here. */
+const TITLE_KEEP = 96;   // title bar that must stay reachable
+
+function clampGeom(g: Geom, minW: number, minH: number): Geom {
+  const vw = typeof window === 'undefined' ? 1440 : window.innerWidth;
+  const vh = typeof window === 'undefined' ? 900 : window.innerHeight;
+  const w = Math.min(Math.max(minW, g.w), Math.max(minW, vw - 24));
+  const h = g.h === null ? null : Math.min(Math.max(minH, g.h), Math.max(minH, vh - 24));
+  const x = Math.min(Math.max(0, g.x), Math.max(0, vw - TITLE_KEEP));
+  const y = Math.min(Math.max(0, g.y), Math.max(0, vh - 40));
+  return { x, y, w, h };
+}
+
 export type BadrWindowProps = {
   id: string;
   title: string;
@@ -73,7 +89,7 @@ export default function BadrWindow({
   useEffect(() => {
     setMounted(true);
     const saved = MEMORY.get(id);
-    if (saved) { setGeom(saved); return; }
+    if (saved) { setGeom(clampGeom(saved, minW, minH)); return; }
     const vw = window.innerWidth;
     const x = side === 'right' ? Math.max(12, vw - defaultW - 24)
       : side === 'left' ? 76
@@ -87,6 +103,12 @@ export default function BadrWindow({
     MEMORY.set(id, g);
     setGeom(g);
   }, [id]);
+
+  useEffect(() => {
+    const onResize = () => setGeom((g) => (g ? clampGeom(g, minW, minH) : g));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [minW, minH]);
 
   const raise = useCallback(() => {
     TOP_Z += 1;
@@ -106,9 +128,7 @@ export default function BadrWindow({
   const onHeaderMove = (e: React.PointerEvent) => {
     const d = dragRef.current;
     if (!d || !geom) return;
-    const x = Math.min(Math.max(0, e.clientX - d.dx), window.innerWidth - 120);
-    const y = Math.min(Math.max(0, e.clientY - d.dy), window.innerHeight - 40);
-    setGeom({ ...geom, x, y });
+    setGeom(clampGeom({ ...geom, x: e.clientX - d.dx, y: e.clientY - d.dy }, minW, minH));
   };
 
   const onHeaderUp = (e: React.PointerEvent) => {
@@ -143,7 +163,7 @@ export default function BadrWindow({
       h = Math.max(minH, s.h - dy);
       y = geom.y + (s.h - h);
     }
-    setGeom({ x, y, w, h });
+    setGeom(clampGeom({ x, y, w, h }, minW, minH));
   };
 
   const onEdgeUp = () => {

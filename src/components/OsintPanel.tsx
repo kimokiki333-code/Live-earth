@@ -82,7 +82,7 @@ interface OsintPanelProps {
    * dossier's "scan this address", for one. `seq` makes the same address
    * usable twice; without it a second hand-off would be a no-op.
    */
-  seed?: { query: string; tab?: string; seq: number } | null;
+  seed?: { query: string; tab?: string; group?: string; seq: number } | null;
 }
 
 function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, onClose, startFullScreen }: OsintPanelProps) {
@@ -111,6 +111,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
     /* A tab-only seed is legitimate: the sidebar's group buttons open the
        toolkit on a group without naming a target yet. */
     if (seed.tab) setActiveTab(seed.tab);
+    if (seed.group !== undefined) setGroupOnly(seed.group);
     if (seed.query) { setQuery(seed.query); setResults(null); setError(''); }
   }, [seed?.seq]);
   // CHAIN INTEL carries two views: the daily brief needs no target, the wallet
@@ -118,6 +119,9 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
   const [chainView, setChainView] = useState<'brief' | 'wallet'>('brief');
   /** Free-text filter over the toolkit — 19 modules is too many to scan. */
   const [toolFilter, setToolFilter] = useState('');
+  /* A group launcher opens this toolkit on ONE group. Showing all 21 modules
+     because you asked for six of them is noise, and it was the complaint. */
+  const [groupOnly, setGroupOnly] = useState<string | null>(null);
   // Owned here, not by the view: toggling the expanded view remounts it.
   const fingerprint = useFingerprintSearch();
 
@@ -1332,7 +1336,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-3 styled-scrollbar">
-        {GROUPS.map(group => {
+        {GROUPS.filter(g => !groupOnly || g.id === groupOnly).map(group => {
           const tools = TABS.filter(t => t.group === group.id && matchesFilter(t));
           if (!tools.length) return null;
           return (
@@ -1451,7 +1455,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
             )}
           </div>
 
-          {GROUPS.map(group => {
+          {GROUPS.filter(g => !groupOnly || g.id === groupOnly).map(group => {
             const tools = TABS.filter(t => t.group === group.id && t.id !== 'sweep' && matchesFilter(t));
             if (!tools.length) return null;
             return (

@@ -654,12 +654,10 @@ main > div.absolute.top-3 {
 /* ══════════════════════════════════════════════════════════════════════
    THE MAP SITS BETWEEN THE RAIL AND THE SIDEBAR
    ══════════════════════════════════════════════════════════════════════ */
-@media (min-width: 1100px) {
-  main > div.absolute.inset-0 {
-    padding-left: 58px;
-    padding-right: 320px;
-  }
-}
+/* The map is full-bleed on purpose. Padding the map's own container shrank the
+   canvas but not the layers drawn on it, which is what produced the grey band
+   down the left edge and the squeezed centre. The rail and the sidebar float
+   above the map instead, the way every map application does it. */
 
 /* never show the rail or the sidebar on a phone — the drawers handle it */
 @media (max-width: 1023px) {
@@ -1076,3 +1074,34 @@ main > div.absolute.top-3 {
   flex: 1 1 auto;
   background: rgba(255, 255, 255, 0.09);
 }
+
+/* basemap failure notice — a black map must never be silent */
+.badr-map-warn {
+  position: absolute;
+  left: 50%;
+  top: 96px;
+  transform: translateX(-50%);
+  z-index: 240;
+  max-width: min(90vw, 520px);
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 212, 0, 0.55);
+  background: rgba(28, 22, 4, 0.94);
+  color: #ffe98a;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  line-height: 1.5;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* a result you can open */
+.badr-res-k--link {
+  color: #63e6ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(99, 230, 255, 0.4);
+}
+.badr-res-k--link:hover { color: #b8f4ff; text-decoration-color: currentColor; }

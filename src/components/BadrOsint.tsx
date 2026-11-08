@@ -51,7 +51,7 @@ function Icon({ path, className }: { path: ReactNode; className?: string }) {
   );
 }
 
-type Row = { label: string; value: string; tone?: 'found' | 'none' | 'warn' };
+type Row = { label: string; value: string; tone?: 'found' | 'none' | 'warn'; href?: string };
 type CardState = { busy: boolean; err?: string; rows: Row[]; note?: string };
 
 const EMPTY: CardState = { busy: false, rows: [] };
@@ -82,7 +82,19 @@ function Result({ state }: { state: CardState }) {
         <div className="badr-res">
           {state.rows.map((r, i) => (
             <div className="badr-res-i" key={`${r.label}-${i}`}>
-              <b title={r.label}>{r.label}</b>
+              {r.href ? (
+                <a
+                  className="badr-res-k badr-res-k--link"
+                  href={r.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`Open ${r.href}`}
+                >
+                  {r.label}
+                </a>
+              ) : (
+                <b title={r.label}>{r.label}</b>
+              )}
               <span className={`badr-res-v ${r.tone || ''}`}>{r.value}</span>
             </div>
           ))}
@@ -135,13 +147,13 @@ function Card({
 
 /* ── the four group launchers ─────────────────────────────────────────── */
 const LAUNCHERS = [
-  { tab: 'scanner', icon: I.server, title: 'NETWORK & HOST', sub: '6', list: 'Port scan · Vuln sweep · Shodan IoT · BGP route · MAC addr · IP sweep' },
-  { tab: 'dns', icon: I.globe, title: 'DOMAIN & WEB', sub: '7', list: 'DNS · WHOIS · Certs · SSL/TLS · Subdomains · Headers · Tech detect' },
-  { tab: 'github', icon: I.user, title: 'IDENTITY LAB', sub: '5', list: 'Username · GitHub recon · Phone intel · Fingerprint · Email intel' },
-  { tab: 'threats', icon: I.shield, title: 'THREAT & CHAIN', sub: '3', list: 'Threats · Data leaks · Chain intel + daily brief' },
+  { tab: 'scanner', group: 'network', icon: I.server, title: 'NETWORK & HOST', sub: '6', list: 'Port scan · Vuln sweep · Shodan IoT · BGP route · MAC addr · IP sweep' },
+  { tab: 'dns', group: 'domain', icon: I.globe, title: 'DOMAIN & WEB', sub: '7', list: 'DNS · WHOIS · Certs · SSL/TLS · Subdomains · Headers · Tech detect' },
+  { tab: 'github', group: 'identity', icon: I.user, title: 'IDENTITY LAB', sub: '5', list: 'Username · GitHub recon · Phone intel · Fingerprint · Email intel' },
+  { tab: 'threats', group: 'threat', icon: I.shield, title: 'THREAT & CHAIN', sub: '3', list: 'Threats · Data leaks · Chain intel + daily brief' },
 ];
 
-export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string) => void }) {
+export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string, group?: string) => void }) {
   const user = useCard();
   const mail = useCard();
   const dom = useCard();
@@ -156,7 +168,9 @@ export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string) =
     try {
       const j = await getJson(`/api/osint/username?username=${encodeURIComponent(q)}`);
       const found = (j.found || []) as any[];
-      const rows: Row[] = found.slice(0, 8).map((h) => ({ label: h.site, value: 'FOUND', tone: 'found' }));
+      /* Each hit is a link to the profile itself. A count you cannot open is
+         not a result, it is a rumour. */
+      const rows: Row[] = found.map((h) => ({ label: h.site, value: 'OPEN ↗', tone: 'found', href: h.url }));
       if (!rows.length) rows.push({ label: 'no confirmed profile', value: 'NONE', tone: 'none' });
       const blocked = (j.blocked || []).length;
       const inc = (j.inconclusive || []).length;
@@ -175,11 +189,12 @@ export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string) =
         { label: 'domain has mail', value: j.domain_deliverable ? 'YES' : 'NO', tone: j.domain_deliverable ? 'found' : 'none' },
         { label: 'gravatar', value: j.gravatar ? 'FOUND' : 'NONE', tone: j.gravatar ? 'found' : 'none' },
       ];
-      for (const a of (j.accounts || []).slice(0, 6)) {
+      for (const a of (j.accounts || [])) {
         rows.push({
           label: a.site,
-          value: a.status === 'found' ? 'FOUND' : a.status === 'error' ? 'CHECK' : 'NONE',
+          value: a.status === 'found' ? 'FOUND ↗' : a.status === 'error' ? 'CHECK' : 'NONE',
           tone: a.status === 'found' ? 'found' : a.status === 'error' ? 'warn' : 'none',
+          href: a.status === 'found' ? a.url : undefined,
         });
       }
       if (typeof j.breached === 'boolean') {
@@ -268,7 +283,6 @@ export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string) =
       <header className="badr-side-h" onClick={() => setCollapsed(true)} title="Collapse intelligence tools">
         <Icon path={I.radar} className="badr-side-ic" />
         <span className="badr-side-t">INTELLIGENCE TOOLS</span>
-        <span className="badr-side-n">21</span>
         <button
           type="button"
           className="badr-side-x"
@@ -294,14 +308,13 @@ export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string) =
         <Card kind="domain" title="DOMAIN" sub="WHOIS" icon={I.at} state={dom.s}
           placeholder="example.com" onRun={runDom} />
 
-        <div className="badr-side-div" aria-hidden="true"><span>FULL TOOLKIT</span></div>
 
         {LAUNCHERS.map((l) => (
           <button
             key={l.tab}
             type="button"
             className="badr-launch"
-            onClick={() => onOpenTool?.(l.tab)}
+            onClick={() => onOpenTool?.(l.tab, l.group)}
             title={l.list}
           >
             <Icon path={l.icon} className="badr-launch-ic" />
