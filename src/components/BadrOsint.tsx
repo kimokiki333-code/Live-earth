@@ -24,7 +24,7 @@
    printed as a failure in yellow.
    ══════════════════════════════════════════════════════════════════════ */
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 /* ── the icon set (inline, 24×24, one stroke weight) ───────────────────── */
 const I = {
@@ -162,6 +162,14 @@ export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string, g
   const self = useCard();
   const [collapsed, setCollapsed] = useState(false);
 
+  /* The bottom bar ends where this panel begins. Publishing the width means
+     the bar, the maximised window and this sidebar never have to guess. */
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--badr-side-w', collapsed ? '0px' : '320px');
+    return () => { root.style.removeProperty('--badr-side-w'); };
+  }, [collapsed]);
+
   /* ── username ── */
   const runUser = async (q: string) => {
     user.reset();
@@ -271,7 +279,7 @@ export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string, g
 
   if (collapsed) {
     return (
-      <button type="button" className="badr-side-tab" onClick={() => setCollapsed(false)} title="Open intelligence tools">
+      <button type="button" data-badr-side className="badr-side-tab" onClick={() => setCollapsed(false)} title="Open intelligence tools">
         <Icon path={I.radar} className="w-4 h-4" />
         <span>INTEL SEARCH</span>
       </button>
@@ -279,7 +287,7 @@ export default function BadrOsint({ onOpenTool }: { onOpenTool?: (tab: string, g
   }
 
   return (
-    <aside className="badr-side" aria-label="Intelligence tools">
+    <aside data-badr-side className="badr-side" aria-label="Intelligence tools">
       <header className="badr-side-h" onClick={() => setCollapsed(true)} title="Collapse intelligence tools">
         <Icon path={I.radar} className="badr-side-ic" />
         <span className="badr-side-t">INTELLIGENCE TOOLS</span>

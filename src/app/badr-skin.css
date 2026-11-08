@@ -267,7 +267,22 @@ main > div.absolute.top-3 {
   border: 1px solid var(--badr-line) !important;
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
   backdrop-filter: blur(18px);
+  /* ONE bar, anchored to the map area — never the full viewport, so it cannot
+     slide under the intelligence sidebar, and never two bars deep. */
+  left: 12px;
+  right: calc(var(--badr-side-w, 320px) + 12px);
   bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.badr-dock-sep {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+@media (max-width: 820px) {
+  .badr-dock { right: 12px; }
 }
 
 .badr-dock button {
@@ -670,11 +685,6 @@ main > div.absolute.top-3 {
    that: the dossier card slid 38px under the 58px rail, and the desktop
    search popover landed on top of the dock buttons.
    ══════════════════════════════════════════════════════════════════════ */
-
-/* dossier card starts to the RIGHT of the rail (rail is 58px, ≥1024 only) */
-@media (min-width: 1024px) {
-  .badr-dossier { left: 58px !important; }
-}
 
 /* the desktop search popover floats well clear of the dock and of the
    OSINT sidebar — fixed, so no ancestor's layout can drag it back down */

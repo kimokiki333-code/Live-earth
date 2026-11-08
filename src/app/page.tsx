@@ -32,7 +32,6 @@ const OsintPanel = dynamic(() => import('@/components/OsintPanel'));
 import { pickLandingCity } from '@/lib/landing-cities';
 import { locateAddress, detectOrigin, type LookupResult } from '@/lib/geo-ip';
 import GeoDossier, { TeleportBanner } from '@/components/GeoDossier';
-import BadrRail from '@/components/BadrRail';
 import BadrOsint from '@/components/BadrOsint';
 import BadrWindow from '@/components/BadrWindow';
 function useIsMobile() {
@@ -1146,18 +1145,6 @@ export default function Dashboard() {
         />
       </ErrorBoundary>
 
-      {/* ── LEFT RAIL — every layer, one button each, neon green when on ── */}
-      {!isMobile && (
-        <BadrRail
-          activeLayers={activeLayers}
-          setActiveLayers={setActiveLayers}
-          data={data}
-          capabilities={capabilities}
-          closeSignal={layerCloseSignal}
-          onOpenTools={() => { setShowIntel(true); setShowAlerts(false); setShowDesktopSearch(false); setShowDirections(false); }}
-        />
-      )}
-
       {/* ── RIGHT SIDEBAR — the OSINT toolkit, permanently visible ── */}
       {!isMobile && (
         <BadrOsint
@@ -1363,13 +1350,29 @@ export default function Dashboard() {
         </div>
       </motion.header>
 
-      {/* ── NEW SIDEBAR (Root Level) ── */}
-      {showLayers && !isMobile && <LayerPanel {...terrainPanelProps} revealed={revealed} data={data} activeLayers={activeLayers} setActiveLayers={setActiveLayers} theme={osirisTheme} capabilities={capabilities} closeSignal={layerCloseSignal} />}
-
-
-
-      {/* ── RIGHT TOOL STRIP (desktop only — mobile uses bottom nav) ── */}
-      {!isMobile && <motion.div initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="badr-dock absolute left-1/2 -translate-x-1/2 flex flex-row flex-wrap justify-center max-w-[97vw] gap-10 z-[250] pointer-events-auto px-5 py-1.5 rounded-2xl">
+      {/* ══ ONE BOTTOM BAR ══
+          The layer groups and the four tool buttons used to be two separate
+          floating bars anchored near the bottom centre. The tool bar (z-250)
+          sat on top of the right-hand layer groups (z-240) — that is why the
+          groups went from seven down to four as the window narrowed, and why
+          opening a panel looked like buttons disappearing. One row now, so
+          nothing in the bar can cover anything else in the bar. */}
+      {!isMobile && <motion.div data-badr-dock initial={{ opacity: 0, y: 16 }} animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }} transition={hudIn(0.3)} className="badr-dock absolute flex flex-row flex-wrap items-center justify-center gap-3 max-w-[calc(100vw-24px)] z-[250] pointer-events-auto px-3 py-2 rounded-2xl">
+        {showLayers && (
+          <LayerPanel
+            embedded
+            {...terrainPanelProps}
+            revealed={revealed}
+            data={data}
+            activeLayers={activeLayers}
+            setActiveLayers={setActiveLayers}
+            theme={osirisTheme}
+            capabilities={capabilities}
+            closeSignal={layerCloseSignal}
+          />
+        )}
+        {showLayers && <span className="badr-dock-sep" aria-hidden="true" />}
+        <div className="flex flex-row flex-wrap items-center justify-center gap-3">
         <div className="relative group">
           <button onClick={() => { const next = !showIntel; setShowIntel(next); setShowAlerts(false); setShowDesktopSearch(false); if (next) { setShowDirections(false); setLayerCloseSignal(v => v + 1); } }} className={`relative w-10 h-10 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-white/10 bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50 ${showIntel ? 'bg-[var(--cyan-primary)]/20' : 'hover:bg-white/10'}`} title="Recon Toolkit — 20 intelligence tools (opens full-screen)" aria-label="OSINT Recon" aria-expanded={showIntel}>
             <Radar className={`w-4 h-4 ${showIntel ? 'text-[var(--cyan-primary)]' : 'text-white/60'}`} />
@@ -1457,6 +1460,7 @@ export default function Dashboard() {
         
 
 
+        </div>
       </motion.div>}
 
       {/* ── RECON TOOLKIT — big centre pop-up (all 20 tools visible) ── */}
@@ -1648,6 +1652,10 @@ export default function Dashboard() {
            worse than no window — it sits over the map saying nothing. */
         if (!approach && !(showTarget && target) && !(showOrigin && origin)) return null;
 
+        /* Opening ALERTS or the toolkit folds the card to its title bar, so the
+           thing just opened is not buried under a maximised dossier. It is not
+           tied to the layer bar any more: that flag is on by default, which is
+           why the card used to open as a small chip on a first visit. */
         return (
           <BadrWindow
             id="dossier"
@@ -1660,8 +1668,8 @@ export default function Dashboard() {
             /* Opens filling the screen for every visitor, then they may
                minimise it. He asked for this five times. */
             defaultMax
-            collapsed={showAlerts || showIntel || showLayers}
-            onExpand={() => { setShowAlerts(false); setShowIntel(false); setShowLayers(false); }}
+            collapsed={showAlerts || showIntel}
+            onExpand={() => { setShowAlerts(false); setShowIntel(false); }}
             onClose={() => { setShowOrigin(false); setShowTarget(false); }}
           >
             {cards}

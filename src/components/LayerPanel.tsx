@@ -27,6 +27,10 @@ interface LayerPanelProps {
   /** Bumped by the page whenever a tool panel opens, so this dock's flyout
    *  closes instead of sitting underneath (or on top of) the new panel. */
   closeSignal?: number;
+  /** Rendered inside the page's single bottom bar instead of owning its own
+   *  floating plate. Two independently positioned bars overlapped; one bar
+   *  cannot. */
+  embedded?: boolean;
 }
 
 interface LayerDef {
@@ -191,7 +195,7 @@ function SubLayerStem() {
   );
 }
 
-function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'core', setTheme, capabilities = {}, terrainStatus = 'idle', onTerrainRetry, onTerrainFocus, on3DModeSelected, revealed = true, closeSignal = 0 }: LayerPanelProps) {
+function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'core', setTheme, capabilities = {}, terrainStatus = 'idle', onTerrainRetry, onTerrainFocus, on3DModeSelected, revealed = true, closeSignal = 0, embedded = false }: LayerPanelProps) {
   const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
   /**
    * A pinned group stays open when the pointer leaves. Hover-only flyouts are
@@ -305,20 +309,31 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
   }
 
   /* ── DESKTOP ── */
+  /* Embedded: the page owns the plate, the motion and the z-index. This
+     component then contributes nothing but the group buttons. */
+  const Root: any = embedded ? 'div' : (motion.div as any);
+  const rootProps: any = embedded
+    ? { className: 'flex flex-row flex-wrap items-center justify-center gap-2' }
+    : {
+        initial: { y: 40, opacity: 0 },
+        animate: revealed ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 },
+        transition: { type: 'spring', damping: 30, stiffness: 200, delay: 0.25 },
+        className: 'absolute bottom-3 left-3 flex flex-row flex-wrap max-w-[86vw] items-center px-5 py-2 z-[240] pointer-events-auto rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]',
+        style: {
+          background: 'rgba(0,0,0,0.55)',
+          backdropFilter: 'blur(24px) saturate(1.2)',
+          WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
+        },
+      };
+
   return (
-    <motion.div
-      initial={{ y: 40, opacity: 0 }}
-      animate={revealed ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }}
-      transition={{ type: 'spring', damping: 30, stiffness: 200, delay: 0.25 }}
-      className="absolute bottom-3 left-3 flex flex-row flex-wrap max-w-[86vw] items-center px-5 py-2 z-[240] pointer-events-auto rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
-      style={{
-        background: 'rgba(0,0,0,0.55)',
-        backdropFilter: 'blur(24px) saturate(1.2)',
-        WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
-      }}
-    >
-      <div className="flex flex-row flex-wrap justify-center items-center gap-10">
-        {visibleGroups.map((group) => {
+    <Root {...rootProps}>
+      <div className={embedded ? 'flex flex-row flex-wrap justify-center items-center gap-2' : 'flex flex-row flex-wrap justify-center items-center gap-10'}>
+        {visibleGroups.map((group, gi) => {
+          /* In the shared bottom bar the last groups sit close to its right
+             edge, so their flyout opens leftwards instead of hanging into the
+             intelligence sidebar. */
+          const flip = embedded && gi >= visibleGroups.length - 2;
           /* Sub-layers modify a parent rather than draw anything of their own,
              so they do not count towards the rail's reading. */
           const counted = group.layers.filter(l => !l.parent);
@@ -392,6 +407,7 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
                     transition={{ duration: 0.18, ease: 'easeOut' }}
                     className="absolute bottom-[58px] left-0 min-w-[230px] rounded-xl p-3 z-[100] pointer-events-auto"
                     style={{
+                      ...(flip ? { left: 'auto', right: 0 } : {}),
                       background: 'rgba(0,0,0,0.6)',
                       backdropFilter: 'blur(40px) saturate(1.5)',
                       WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
@@ -460,7 +476,7 @@ function LayerPanel({ data, activeLayers, setActiveLayers, isMobile, theme = 'co
         })}
       </div>
 
-    </motion.div>
+    </Root>
   );
 }
 

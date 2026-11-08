@@ -52,6 +52,25 @@ function clampGeom(g: Geom, minW: number, minH: number): Geom {
   return { x, y, w, h };
 }
 
+/* The workspace: everything that is NOT the top banner, the right-hand
+   intelligence sidebar or the single bottom bar. A maximised window fills this
+   rectangle and stops — so the controls it would otherwise cover stay where
+   they are and stay usable. Before this, maximise meant the full viewport and
+   the bottom bar vanished under the card. */
+function stageRect() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const declared = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--badr-top')) || 90;
+  const top = declared + 8;
+  const side = document.querySelector('[data-badr-side]') as HTMLElement | null;
+  const dock = document.querySelector('[data-badr-dock]') as HTMLElement | null;
+  const sideRect = side?.getBoundingClientRect();
+  const dockRect = dock?.getBoundingClientRect();
+  const right = sideRect && sideRect.width > 0 ? Math.round(sideRect.left) - 12 : vw - 12;
+  const bottom = dockRect && dockRect.height > 0 ? Math.round(dockRect.top) - 12 : vh - 12;
+  return { left: 12, top, right, bottom: Math.max(bottom, top + 200) };
+}
+
 export type BadrWindowProps = {
   id: string;
   title: string;
@@ -176,8 +195,15 @@ export default function BadrWindow({
 
   if (!mounted || !geom) return null;
 
-  const style: React.CSSProperties = maxed
-    ? { left: 14, top: 14, width: window.innerWidth - 28, height: window.innerHeight - 28, zIndex: z }
+  const stage = maxed ? stageRect() : null;
+  const style: React.CSSProperties = maxed && stage
+    ? {
+        left: stage.left,
+        top: stage.top,
+        width: Math.max(minW, stage.right - stage.left),
+        height: Math.max(minH, stage.bottom - stage.top),
+        zIndex: z,
+      }
     : { left: geom.x, top: geom.y, width: geom.w, height: geom.h ?? undefined, zIndex: z };
 
   const node = (
