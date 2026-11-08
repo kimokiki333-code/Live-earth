@@ -200,6 +200,7 @@ export default function GeoDossier({ result, variant, onRecenter, onScan, onClos
       exit={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
       className={`glass-panel relative overflow-hidden ${compact ? 'w-[min(94vw,420px)]' : 'w-[min(94vw,520px)]'}`}
+      data-badr-fluid="true"
       style={{ borderColor: 'var(--border-primary)' }}
     >
       {/* The only ornament: a hairline that fades across the top. */}

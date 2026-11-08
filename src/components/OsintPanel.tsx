@@ -1893,7 +1893,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
           <div className="flex items-center justify-between px-6 py-3.5 border-b border-[var(--border-secondary)] bg-[#111] flex-shrink-0">
             <div className="flex items-center gap-3 min-w-0">
               <Radar className="w-5 h-5 text-[var(--cyan-primary)] flex-shrink-0" />
-              <span className="hud-text text-[16px] text-[var(--text-primary)]">BADR RECON TOOLKIT</span>
+              <span className="hud-text text-[16px] text-[var(--text-primary)]">INTELLIGENCE</span>
               <span className="gotham-tag gotham-tag--classified" style={{ fontSize: '9px' }}>{TABS.length} MODULES</span>
               {currentTab && (
                 <>
@@ -1907,7 +1907,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
                 </>
               )}
             </div>
-            <button onClick={() => { if (onClose) onClose(); else setIsFullScreen(false); }} className="p-2 hover:bg-white/5 rounded transition-colors text-[var(--text-muted)] hover:text-white flex-shrink-0" title="Close toolkit (Esc)">
+            <button onClick={() => { if (onClose) onClose(); else setIsFullScreen(false); }} className="p-2 hover:bg-white/5 rounded transition-colors text-[var(--text-muted)] hover:text-white flex-shrink-0" title="Close (Esc)">
               <Minimize2 className="w-5 h-5" />
             </button>
           </div>
@@ -1945,7 +1945,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.3)] hover:bg-[var(--hover-accent)] transition-colors">
         <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 flex-1">
           <Radar className="w-3.5 h-3.5 text-[var(--cyan-primary)]" />
-          <span className="hud-text text-[11px] text-[var(--text-primary)]">RECON TOOLKIT</span>
+          <span className="hud-text text-[11px] text-[var(--text-primary)]">INTELLIGENCE</span>
           <span className="gotham-tag gotham-tag--info" style={{ fontSize: '9px', padding: '1px 5px' }}>{TABS.length} TOOLS</span>
         </button>
         <div className="flex items-center gap-3">

@@ -70,18 +70,20 @@ export type BadrWindowProps = {
   /** Where it first appears. */
   side?: 'right' | 'left' | 'centre';
   defaultTop?: number;
+  /** Open filling the viewport. The user may then minimise it. */
+  defaultMax?: boolean;
 };
 
 export default function BadrWindow({
   id, title, subtitle, accent = 'gold', children, onClose,
   collapsed = false, onExpand,
   defaultW = 380, defaultH, minW = 260, minH = 120,
-  side = 'right', defaultTop = 104,
+  side = 'right', defaultTop = 104, defaultMax = false,
 }: BadrWindowProps) {
   const [mounted, setMounted] = useState(false);
   const [geom, setGeom] = useState<Geom | null>(null);
   const [z, setZ] = useState(TOP_Z);
-  const [maxed, setMaxed] = useState(false);
+  const [maxed, setMaxed] = useState(defaultMax);
   const dragRef = useRef<{ dx: number; dy: number } | null>(null);
   const sizeRef = useRef<{ edge: Edge; x: number; y: number; w: number; h: number } | null>(null);
 

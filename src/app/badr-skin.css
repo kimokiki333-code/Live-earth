@@ -1105,3 +1105,18 @@ main > div.absolute.top-3 {
   text-decoration-color: rgba(99, 230, 255, 0.4);
 }
 .badr-res-k--link:hover { color: #b8f4ff; text-decoration-color: currentColor; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   A CARD INSIDE A WINDOW STRETCHES WITH IT
+   The dossier card carried a hard w-[min(94vw,520px)], so dragging the
+   window's edge grew a black frame around a card that never changed size.
+   Inside .badr-win-bd the card is now 100% of the window, and the window's
+   body is a flex column so it actually hands down its height too.
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-win-bd { display: flex; flex-direction: column; }
+.badr-win-bd > [data-badr-fluid='true'] {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 auto;
+  min-height: 0;
+}

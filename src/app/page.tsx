@@ -1155,7 +1155,6 @@ export default function Dashboard() {
           capabilities={capabilities}
           closeSignal={layerCloseSignal}
           onOpenTools={() => { setShowIntel(true); setShowAlerts(false); setShowDesktopSearch(false); setShowDirections(false); }}
-          onOpenFeatures={() => { setShowLayers(true); setShowAlerts(false); }}
         />
       )}
 
@@ -1658,6 +1657,9 @@ export default function Dashboard() {
             defaultW={470}
             defaultTop={100}
             side="left"
+            /* Opens filling the screen for every visitor, then they may
+               minimise it. He asked for this five times. */
+            defaultMax
             collapsed={showAlerts || showIntel || showLayers}
             onExpand={() => { setShowAlerts(false); setShowIntel(false); setShowLayers(false); }}
             onClose={() => { setShowOrigin(false); setShowTarget(false); }}
