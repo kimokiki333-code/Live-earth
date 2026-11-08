@@ -1116,7 +1116,7 @@ export default function LiveAlerts({ data, onLocate, onWatchFeed, onRefresh, pin
       transition={{ delay: 0.15, duration: 0.4 }}
       role={maximized ? 'dialog' : undefined}
       aria-label={maximized ? 'Live alerts' : undefined}
-      className={`glass-panel flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 ${maximized ? 'fixed inset-4 z-[9999] bg-[#0a0a09]/95 backdrop-blur-3xl' : 'shrink-0 h-[560px] max-h-[82vh] resize-y'}`}
+      className={`glass-panel flex flex-col overflow-hidden pointer-events-auto transition-all duration-300 ${maximized ? 'fixed inset-4 z-[9999] bg-[#0a0a09]/95 backdrop-blur-3xl' : expanded ? 'shrink-0 h-[560px] max-h-[82vh] resize-y' : 'shrink-0 h-auto'}`}
     >
       {/* Header: title and controls, then a status line */}
       <div className="flex-shrink-0 border-b border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.3)]">

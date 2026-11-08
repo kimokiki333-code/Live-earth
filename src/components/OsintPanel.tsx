@@ -82,7 +82,7 @@ interface OsintPanelProps {
    * dossier's "scan this address", for one. `seq` makes the same address
    * usable twice; without it a second hand-off would be a no-op.
    */
-  seed?: { query: string; tab?: string; seq: number } | null;
+  seed?: { query: string; tab?: string; group?: string; seq: number } | null;
 }
 
 function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, onClose, startFullScreen }: OsintPanelProps) {
@@ -107,17 +107,21 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
   /* A hand-off from the map: put the address in the box, on the tool that was
      asked for, and clear whatever the last lookup left on screen. */
   useEffect(() => {
-    if (!seed?.query) return;
+    if (!seed) return;
+    /* A tab-only seed is legitimate: the sidebar's group buttons open the
+       toolkit on a group without naming a target yet. */
     if (seed.tab) setActiveTab(seed.tab);
-    setQuery(seed.query);
-    setResults(null);
-    setError('');
+    if (seed.group !== undefined) setGroupOnly(seed.group);
+    if (seed.query) { setQuery(seed.query); setResults(null); setError(''); }
   }, [seed?.seq]);
   // CHAIN INTEL carries two views: the daily brief needs no target, the wallet
   // lookup uses the shared query bar.
   const [chainView, setChainView] = useState<'brief' | 'wallet'>('brief');
   /** Free-text filter over the toolkit — 19 modules is too many to scan. */
   const [toolFilter, setToolFilter] = useState('');
+  /* A group launcher opens this toolkit on ONE group. Showing all 21 modules
+     because you asked for six of them is noise, and it was the complaint. */
+  const [groupOnly, setGroupOnly] = useState<string | null>(null);
   // Owned here, not by the view: toggling the expanded view remounts it.
   const fingerprint = useFingerprintSearch();
 
@@ -1332,7 +1336,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-3 styled-scrollbar">
-        {GROUPS.map(group => {
+        {GROUPS.filter(g => !groupOnly || g.id === groupOnly).map(group => {
           const tools = TABS.filter(t => t.group === group.id && matchesFilter(t));
           if (!tools.length) return null;
           return (
@@ -1451,7 +1455,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
             )}
           </div>
 
-          {GROUPS.map(group => {
+          {GROUPS.filter(g => !groupOnly || g.id === groupOnly).map(group => {
             const tools = TABS.filter(t => t.group === group.id && t.id !== 'sweep' && matchesFilter(t));
             if (!tools.length) return null;
             return (
@@ -1889,7 +1893,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
           <div className="flex items-center justify-between px-6 py-3.5 border-b border-[var(--border-secondary)] bg-[#111] flex-shrink-0">
             <div className="flex items-center gap-3 min-w-0">
               <Radar className="w-5 h-5 text-[var(--cyan-primary)] flex-shrink-0" />
-              <span className="hud-text text-[16px] text-[var(--text-primary)]">BADR RECON TOOLKIT</span>
+              <span className="hud-text text-[16px] text-[var(--text-primary)]">INTELLIGENCE</span>
               <span className="gotham-tag gotham-tag--classified" style={{ fontSize: '9px' }}>{TABS.length} MODULES</span>
               {currentTab && (
                 <>
@@ -1903,7 +1907,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
                 </>
               )}
             </div>
-            <button onClick={() => { if (onClose) onClose(); else setIsFullScreen(false); }} className="p-2 hover:bg-white/5 rounded transition-colors text-[var(--text-muted)] hover:text-white flex-shrink-0" title="Close toolkit (Esc)">
+            <button onClick={() => { if (onClose) onClose(); else setIsFullScreen(false); }} className="p-2 hover:bg-white/5 rounded transition-colors text-[var(--text-muted)] hover:text-white flex-shrink-0" title="Close (Esc)">
               <Minimize2 className="w-5 h-5" />
             </button>
           </div>
@@ -1941,7 +1945,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate, seed, on
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.3)] hover:bg-[var(--hover-accent)] transition-colors">
         <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 flex-1">
           <Radar className="w-3.5 h-3.5 text-[var(--cyan-primary)]" />
-          <span className="hud-text text-[11px] text-[var(--text-primary)]">RECON TOOLKIT</span>
+          <span className="hud-text text-[11px] text-[var(--text-primary)]">INTELLIGENCE</span>
           <span className="gotham-tag gotham-tag--info" style={{ fontSize: '9px', padding: '1px 5px' }}>{TABS.length} TOOLS</span>
         </button>
         <div className="flex items-center gap-3">

@@ -177,13 +177,16 @@
 }
 
 .badr-alertpill b {
-  min-width: 20px;
+  min-width: 24px;
   height: 17px;
+  padding: 0 5px;
   display: inline-grid;
   place-items: center;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.22);
   font-size: 10px;
+  line-height: 1;
+  flex: 0 0 auto;
 }
 
 .badr-alertpill:hover {
@@ -207,7 +210,8 @@
   font-family: ui-monospace, monospace;
   font-size: 10px;
   letter-spacing: 0.06em;
-  overflow: hidden;
+  /* nothing in the strip may be clipped — the VIEW button used to be cut */
+  overflow: visible;
   white-space: nowrap;
 }
 
@@ -240,6 +244,8 @@
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.14em;
+  align-self: center;
+  flex: 0 0 auto;
 }
 
 .badr-aview:hover {
@@ -261,7 +267,22 @@ main > div.absolute.top-3 {
   border: 1px solid var(--badr-line) !important;
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
   backdrop-filter: blur(18px);
+  /* ONE bar, anchored to the map area — never the full viewport, so it cannot
+     slide under the intelligence sidebar, and never two bars deep. */
+  left: 12px;
+  right: calc(var(--badr-side-w, 320px) + 12px);
   bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.badr-dock-sep {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+@media (max-width: 820px) {
+  .badr-dock { right: 12px; }
 }
 
 .badr-dock button {
@@ -396,6 +417,7 @@ main > div.absolute.top-3 {
   transition: color .15s, background .15s, border-color .15s, box-shadow .15s;
 }
 
+.badr-rail-btn { font-size: 0; line-height: 1; }
 .badr-rail-ic { width: 19px; height: 19px; }
 
 /* ON — neon green */
@@ -406,21 +428,9 @@ main > div.absolute.top-3 {
   box-shadow: inset 3px 0 0 var(--badr-on), 0 0 14px rgba(57, 255, 136, 0.14);
 }
 
-.badr-rail-btn.on .badr-rail-n {
-  position: absolute;
-  right: 3px;
-  bottom: 3px;
-  min-width: 14px;
-  height: 13px;
-  padding: 0 3px;
-  border-radius: 4px;
-  display: grid;
-  place-items: center;
-  font-size: 8px;
-  font-weight: 900;
-  color: var(--badr-on);
-  background: rgba(57, 255, 136, 0.2);
-}
+/* No numbers on the rail. A count chip is extra geometry that collided with
+   the icon and spilled out of the 58px column; the count now lives in the
+   tooltip / aria-label. The ON state carries the meaning on its own. */
 
 .badr-rail-btn:hover { background: rgba(255, 255, 255, 0.07); color: #eef3fa; }
 .badr-rail-btn.off-dim { opacity: 0.42; }
@@ -659,14 +669,464 @@ main > div.absolute.top-3 {
 /* ══════════════════════════════════════════════════════════════════════
    THE MAP SITS BETWEEN THE RAIL AND THE SIDEBAR
    ══════════════════════════════════════════════════════════════════════ */
-@media (min-width: 1100px) {
-  main > div.absolute.inset-0 {
-    padding-left: 58px;
-    padding-right: 320px;
-  }
-}
+/* The map is full-bleed on purpose. Padding the map's own container shrank the
+   canvas but not the layers drawn on it, which is what produced the grey band
+   down the left edge and the squeezed centre. The rail and the sidebar float
+   above the map instead, the way every map application does it. */
 
 /* never show the rail or the sidebar on a phone — the drawers handle it */
 @media (max-width: 1023px) {
   .badr-rail, .badr-side, .badr-side-tab { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   CLEARANCE — nothing may sit under the rail, the dock or the sidebar.
+   These three rules exist because the deployed 16:19 build showed exactly
+   that: the dossier card slid 38px under the 58px rail, and the desktop
+   search popover landed on top of the dock buttons.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* the desktop search popover floats well clear of the dock and of the
+   OSINT sidebar — fixed, so no ancestor's layout can drag it back down */
+.badr-search-pop {
+  position: fixed !important;
+  bottom: 92px !important;
+  right: 16px !important;
+  z-index: 265 !important;
+}
+@media (min-width: 1100px) {
+  .badr-search-pop { right: 340px !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   RAIL v2 — nine GROUP buttons, not twenty-six layer buttons
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* count dot — deliberately small, and never wider than the button */
+.badr-rail-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 2px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+  color: #04120a;
+  background: var(--badr-on);
+}
+
+.badr-rail-btn.sel {
+  border-color: rgba(255, 255, 255, 0.30);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* click-away target — sits under the rail so the rail stays usable */
+.badr-rail-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 255;
+  background: transparent;
+  border: 0;
+  cursor: default;
+}
+
+/* the group flyout — opens beside the rail, never clipped by it */
+.badr-rail-fly {
+  position: fixed;
+  left: 62px;
+  z-index: 262;
+  width: 246px;
+  max-height: 360px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(9, 13, 21, 0.98);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+.badr-rail-fly-h {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--badr-line);
+  flex: 0 0 auto;
+}
+.badr-rail-fly-ic { width: 14px; height: 14px; color: var(--badr-on); flex: 0 0 auto; }
+.badr-rail-fly-t {
+  font-family: ui-monospace, monospace;
+  font-size: 9.5px; font-weight: 900; letter-spacing: .16em;
+  color: #eef3fa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.badr-rail-fly-x {
+  margin-left: auto; width: 20px; height: 20px; border-radius: 5px;
+  display: grid; place-items: center; flex: 0 0 auto;
+  border: 1px solid var(--badr-line); color: #aeb6c6; background: #0b0f18;
+}
+.badr-rail-fly-x:hover { color: #fff; border-color: rgba(255,255,255,.3); }
+
+.badr-rail-fly-b { overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 3px; }
+
+.badr-rail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--badr-off);
+  font-family: ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: left;
+  transition: background .14s, color .14s, border-color .14s;
+}
+.badr-rail-row:hover { background: rgba(255, 255, 255, 0.06); color: #eef3fa; }
+.badr-rail-row.on { color: var(--badr-on); background: var(--badr-on-dim); border-color: rgba(57, 255, 136, 0.30); }
+.badr-rail-row.dim { opacity: 0.45; }
+
+.badr-rail-row-sw {
+  width: 22px; height: 12px; flex: 0 0 auto;
+  border-radius: 6px; border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.06);
+  position: relative;
+}
+.badr-rail-row-sw::after {
+  content: ''; position: absolute; top: 1px; left: 1px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #6b7688; transition: .16s;
+}
+.badr-rail-row.on .badr-rail-row-sw { border-color: rgba(57,255,136,.55); background: rgba(57,255,136,.18); }
+.badr-rail-row.on .badr-rail-row-sw::after { left: 11px; background: var(--badr-on); }
+
+.badr-rail-row-l { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badr-rail-row-n { flex: 0 0 auto; font-size: 9px; color: #7c8698; font-weight: 800; }
+.badr-rail-row.on .badr-rail-row-n { color: rgba(57, 255, 136, 0.85); }
+
+.badr-rail-fly-f {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-top: 1px solid var(--badr-line);
+  font-family: ui-monospace, monospace;
+  font-size: 8.5px; letter-spacing: .14em; color: #7c8698;
+  text-transform: uppercase;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SIDEBAR v2 — sections and group launchers
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-sec {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 2px 0;
+}
+.badr-sec--gap { margin-top: 6px; }
+.badr-sec-t {
+  font-family: ui-monospace, monospace;
+  font-size: 8.5px; font-weight: 900; letter-spacing: .18em;
+  color: #7c8698;
+}
+.badr-sec-n {
+  margin-left: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 8px; font-weight: 800; color: #4f5866;
+}
+
+.badr-launch {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 11px;
+  border: 1px solid var(--badr-line);
+  background: linear-gradient(180deg, #0b0f18, #080c14);
+  color: #cdd6e4;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .10em;
+  text-align: left;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.badr-launch:hover { border-color: rgba(57, 255, 136, 0.42); color: #eef3fa; background: rgba(57, 255, 136, 0.07); }
+.badr-launch-ic { width: 16px; height: 16px; flex: 0 0 auto; color: #63e6ff; }
+.badr-launch:hover .badr-launch-ic { color: var(--badr-on); }
+.badr-launch-t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badr-launch-n {
+  flex: 0 0 auto;
+  min-width: 16px; height: 15px;
+  border-radius: 4px;
+  display: grid; place-items: center;
+  font-size: 8.5px; font-weight: 900;
+  color: #9aa5b6;
+  background: rgba(255, 255, 255, 0.07);
+}
+.badr-launch-a { width: 12px; height: 12px; flex: 0 0 auto; color: #4f5866; }
+.badr-launch:hover .badr-launch-a { color: var(--badr-on); }
+
+.badr-go--wide { width: 100%; margin-top: 7px; justify-content: center; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   ONE PANEL AT A TIME — the dossier folds into a chip
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-dossier.is-min .badr-dossier-body { display: none; }
+
+.badr-dossier-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(57, 255, 136, 0.38);
+  background: rgba(9, 20, 15, 0.94);
+  color: #d7fbe6;
+  font-family: ui-monospace, monospace;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+}
+.badr-dossier-chip:hover { border-color: rgba(57, 255, 136, 0.7); background: rgba(14, 32, 23, 0.96); }
+.badr-dossier-chip-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--badr-on);
+  box-shadow: 0 0 8px var(--badr-on);
+  flex: 0 0 auto;
+}
+.badr-dossier-chip-t { color: #eef3fa; }
+.badr-dossier-chip-a { color: var(--badr-on); font-size: 8.5px; letter-spacing: .14em; }
+
+/* the directions card must clear the 320px sidebar as well */
+@media (min-width: 1100px) {
+  .badr-directions { right: 332px !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   FLOATING WINDOWS — drag, resize from any edge or corner, stack
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-win {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(8, 12, 19, 0.97);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.66), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+  pointer-events: auto;
+}
+.badr-win--gold  { border-color: rgba(255, 215, 0, 0.30); }
+.badr-win--green { border-color: rgba(57, 255, 136, 0.30); }
+.badr-win--red   { border-color: rgba(255, 45, 85, 0.34); }
+.badr-win--cyan  { border-color: rgba(99, 230, 255, 0.28); }
+
+.badr-win-h {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  height: 32px;
+  padding: 0 6px 0 10px;
+  background: linear-gradient(180deg, rgba(19, 26, 38, 0.98), rgba(11, 16, 25, 0.98));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.badr-win-h:active { cursor: grabbing; }
+.badr-win.is-min .badr-win-h { border-bottom: 0; }
+
+.badr-win-dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: #ffd700; box-shadow: 0 0 8px currentColor; }
+.badr-win--green .badr-win-dot { background: var(--badr-on); }
+.badr-win--red .badr-win-dot { background: var(--badr-alert); }
+.badr-win--cyan .badr-win-dot { background: #63e6ff; }
+
+.badr-win-t {
+  font-family: ui-monospace, monospace;
+  font-size: 9.5px; font-weight: 900; letter-spacing: .16em;
+  color: #eef3fa; white-space: nowrap;
+}
+.badr-win-s {
+  font-family: ui-monospace, monospace;
+  font-size: 8px; font-weight: 700; letter-spacing: .12em;
+  color: #6d7789; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.badr-win-btns { margin-left: auto; display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
+.badr-win-b {
+  width: 20px; height: 20px; border-radius: 5px;
+  display: grid; place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: #aeb6c6;
+}
+.badr-win-b:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
+.badr-win-b--x:hover { background: rgba(255, 45, 85, 0.75); border-color: rgba(255, 45, 85, 0.9); color: #fff; }
+
+.badr-win-bd {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+/* resize grips — invisible until the pointer is over them */
+.badr-win-grip { position: absolute; z-index: 5; touch-action: none; }
+.badr-win-grip--n { top: -3px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.badr-win-grip--s { bottom: -3px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.badr-win-grip--e { right: -3px; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.badr-win-grip--w { left: -3px; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.badr-win-grip--ne { top: -4px; right: -4px; width: 14px; height: 14px; cursor: nesw-resize; }
+.badr-win-grip--nw { top: -4px; left: -4px; width: 14px; height: 14px; cursor: nwse-resize; }
+.badr-win-grip--se { bottom: -4px; right: -4px; width: 14px; height: 14px; cursor: nwse-resize; }
+.badr-win-grip--sw { bottom: -4px; left: -4px; width: 14px; height: 14px; cursor: nesw-resize; }
+.badr-win-grip--se::after {
+  content: ''; position: absolute; right: 3px; bottom: 3px;
+  width: 7px; height: 7px;
+  border-right: 1.5px solid rgba(255, 255, 255, 0.28);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.28);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LEFT RAIL — bigger hits, breathing room, no full-height slab behind it
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-rail {
+  width: 62px;
+  gap: 7px;
+  padding: 12px 0 16px;
+  background: transparent;
+  border-right: 0;
+  backdrop-filter: none;
+}
+.badr-rail-btn { width: 48px; height: 46px; border-radius: 12px; }
+.badr-rail-ic { width: 22px; height: 22px; }
+.badr-rail-btn.on { box-shadow: inset 3px 0 0 var(--badr-on), 0 0 16px rgba(57, 255, 136, 0.16); }
+.badr-rail-dot { top: 4px; right: 4px; min-width: 13px; height: 13px; font-size: 8.5px; }
+
+@media (min-width: 1024px) {
+  .badr-dossier { left: 62px !important; }
+}
+.badr-rail-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-top: 10px;
+}
+.badr-rail-foot .badr-rail-btn { color: #ffd700; border: 1px solid rgba(255, 215, 0, 0.28); }
+.badr-rail-foot .badr-rail-btn:hover { color: #ffe886; border-color: rgba(255, 215, 0, 0.6); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   TOP BAR — shading belongs to the brand block, not to the whole strip
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-topbar { background: transparent; box-shadow: none; border-bottom: 0; backdrop-filter: none; }
+.badr-brand {
+  padding: 5px 12px 5px 6px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(8, 12, 19, 0.92), rgba(8, 12, 19, 0.74));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SIDEBAR — the title is the control; the counts read, never shout
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-side-h { cursor: pointer; }
+.badr-side-t { font-size: 10.5px; letter-spacing: .18em; }
+.badr-side-n { color: #cfd6e2; font-size: 9px; letter-spacing: .12em; }
+.badr-side-x { width: 24px; height: 24px; }
+
+/* the keyboard hint must never run into the placeholder */
+.badr-kbd {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #7c8698;
+  font-family: ui-monospace, monospace;
+  font-size: 8.5px;
+  letter-spacing: .10em;
+}
+
+/* inner padding for a window whose child has its own frame */
+.badr-win-pad { padding: 10px; }
+
+/* a quiet divider inside the sidebar */
+.badr-side-div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 1px;
+  color: #5c6675;
+  font-family: ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .18em;
+}
+.badr-side-div::before,
+.badr-side-div::after {
+  content: '';
+  height: 1px;
+  flex: 1 1 auto;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* basemap failure notice — a black map must never be silent */
+.badr-map-warn {
+  position: absolute;
+  left: 50%;
+  top: 96px;
+  transform: translateX(-50%);
+  z-index: 240;
+  max-width: min(90vw, 520px);
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 212, 0, 0.55);
+  background: rgba(28, 22, 4, 0.94);
+  color: #ffe98a;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  line-height: 1.5;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* a result you can open */
+.badr-res-k--link {
+  color: #63e6ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(99, 230, 255, 0.4);
+}
+.badr-res-k--link:hover { color: #b8f4ff; text-decoration-color: currentColor; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   A CARD INSIDE A WINDOW STRETCHES WITH IT
+   The dossier card carried a hard w-[min(94vw,520px)], so dragging the
+   window's edge grew a black frame around a card that never changed size.
+   Inside .badr-win-bd the card is now 100% of the window, and the window's
+   body is a flex column so it actually hands down its height too.
+   ══════════════════════════════════════════════════════════════════════ */
+.badr-win-bd { display: flex; flex-direction: column; }
+.badr-win-bd > [data-badr-fluid='true'] {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 auto;
+  min-height: 0;
 }
